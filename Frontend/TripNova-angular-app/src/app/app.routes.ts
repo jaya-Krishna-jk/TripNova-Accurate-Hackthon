@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { TravelMockComponent } from './travel-mock/travel-mock.component';
 
 export const routes: Routes = [
   {
@@ -28,5 +29,6 @@ export const routes: Routes = [
     title: 'TripNova | Sign in',
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
+  { path: 'mock-trip', component: TravelMockComponent },
   { path: '**', redirectTo: '' },
 ];
