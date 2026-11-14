@@ -352,6 +352,43 @@ export function applyTripTrackingAction(
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeDatabaseService {
+  /**
+   * Observe the one approved traveler-home record. This listener is read-only;
+   * ownership is verified by the page before any trip fields are rendered.
+   */
+  subscribeToTravelerHomeTrip(
+    onSnapshot: (snapshot: DataSnapshot) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    let active = true;
+    let stopListening = (): void => {};
+    const stopOnce = (): void => {
+      if (!active) {
+        return;
+      }
+      active = false;
+      stopListening();
+    };
+
+    stopListening = onValue(
+      ref(this.getDatabase(), 'userTrips/TN-3UP9HH'),
+      (snapshot) => {
+        if (active) {
+          onSnapshot(snapshot);
+        }
+      },
+      (error) => {
+        if (!active) {
+          return;
+        }
+        stopOnce();
+        onError(error);
+      },
+    );
+
+    return stopOnce;
+  }
+
   async loadTrip(tripId: string): Promise<TripLoadResult> {
     const normalizedId = this.normalizeTripId(tripId);
 

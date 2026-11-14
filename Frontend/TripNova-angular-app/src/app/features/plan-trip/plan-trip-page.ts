@@ -1,10 +1,22 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
+import { RealtimeDatabaseService } from '../../realtime-database.service';
 
 interface ContextAnchor {
   origin: string;
@@ -22,15 +34,74 @@ interface QuickPrompt {
 
 type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 
+interface TripActivityView {
+  overallNumber: number;
+  activityNumber: number;
+  activityCount: number;
+  time: string;
+  place: string;
+  description: string;
+  type: string;
+  isSelected: boolean;
+}
+
+interface TripDayView {
+  ordinal: number;
+  heading: string;
+  theme?: string;
+  isSelected: boolean;
+  activities: TripActivityView[];
+}
+
+interface TravelerTripView {
+  statusLabel: string;
+  isPreview: boolean;
+  dayPositionLabel: string;
+  activityPositionLabel: string;
+  overallPositionLabel: string;
+  railAccessibleLabel: string;
+  railPositionPercent: number;
+  totalActivities: number;
+  days: TripDayView[];
+  currentActivity: TripActivityView;
+  nextActivity?: TripActivityView;
+  delayTriggeredLabel: string;
+  driftHoursLabel: string;
+  delayTone: 'triggered' | 'not-triggered' | 'unknown';
+}
+
+type TravelerTripState =
+  | { kind: 'loading' }
+  | { kind: 'empty' }
+  | { kind: 'unavailable'; message: string }
+  | { kind: 'error' }
+  | { kind: 'live'; trip: TravelerTripView };
+
+const NOT_PROVIDED = 'Not provided';
+const TRIP_ID = 'TN-3UP9HH';
+const OWNER_ID = 'jk';
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 @Component({
   selector: 'app-plan-trip-page',
   imports: [FormsModule],
   templateUrl: './plan-trip-page.html',
 })
-export class PlanTripPage {
+export class PlanTripPage implements OnInit, OnDestroy {
   private readonly travelApi = inject(TravelApiService);
   private readonly tripState = inject(TripStateService);
   private readonly router = inject(Router);
+  private readonly database = inject(RealtimeDatabaseService);
+  private readonly platformId = inject(PLATFORM_ID);
+  @ViewChild('delayDialog') private delayDialog?: ElementRef<HTMLDialogElement>;
+  private stopTripListener: (() => void) | undefined;
+  private destroyed = false;
+  private delayTransitionBaseline: boolean | undefined;
+  private delayDialogOpenToken = 0;
+  private previouslyFocusedElement: HTMLElement | null = null;
 
   protected readonly quickPrompts: QuickPrompt[] = [
     {
@@ -72,8 +143,327 @@ export class PlanTripPage {
   protected readonly status = signal<RequestStatus>('idle');
   protected readonly errorMessage = signal('');
 
+  protected readonly travelerTripState = signal<TravelerTripState>({ kind: 'loading' });
+  protected readonly delayAlertMessage = signal('');
   protected readonly isLoading = computed(() => this.status() === 'loading');
   protected readonly canSubmit = computed(() => !this.isLoading() && this.prompt.trim().length > 0);
+
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    this.startTripListener();
+  }
+
+  protected retryTripListener(): void {
+    this.startTripListener();
+  }
+
+  private startTripListener(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.resetDelayAlert();
+    this.stopTripListener?.();
+    this.travelerTripState.set({ kind: 'loading' });
+    this.stopTripListener = this.database.subscribeToTravelerHomeTrip(
+      (snapshot) => {
+        if (this.destroyed) {
+          return;
+        }
+        const projectedTrip = this.projectTravelerTrip(snapshot.exists() ? snapshot.val() : null);
+        this.travelerTripState.set(projectedTrip);
+        this.processDelayTransition(projectedTrip);
+      },
+      () => {
+        if (this.destroyed) {
+          return;
+        }
+        this.resetDelayAlert();
+        this.travelerTripState.set({ kind: 'error' });
+      },
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.resetDelayAlert();
+    this.stopTripListener?.();
+    this.stopTripListener = undefined;
+  }
+
+  private processDelayTransition(state: TravelerTripState): void {
+    if (state.kind !== 'live') {
+      this.resetDelayAlert();
+      return;
+    }
+
+    if (state.trip.delayTone !== 'triggered') {
+      this.delayTransitionBaseline = state.trip.delayTone === 'not-triggered' ? false : undefined;
+      return;
+    }
+
+    const shouldOpen = this.delayTransitionBaseline !== true;
+    this.delayTransitionBaseline = true;
+    if (shouldOpen) {
+      const hours = state.trip.driftHoursLabel === NOT_PROVIDED
+        ? 'an unknown number of hours'
+        : `${state.trip.driftHoursLabel} hours`;
+      this.delayAlertMessage.set(
+        `Your trip was delayed by ${hours}. Here is the recommended plan. Plan your things appropriately. Don't panic. Use the AI suggestions for a safe and better plan.`,
+      );
+      this.queueDelayDialogOpen();
+    }
+  }
+
+  private queueDelayDialogOpen(): void {
+    const token = ++this.delayDialogOpenToken;
+    window.requestAnimationFrame(() => {
+      if (this.destroyed || token !== this.delayDialogOpenToken || this.delayTransitionBaseline !== true) {
+        return;
+      }
+
+      const dialog = this.delayDialog?.nativeElement;
+      if (!dialog || dialog.open) {
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      this.previouslyFocusedElement = activeElement instanceof HTMLElement ? activeElement : null;
+      dialog.showModal();
+      dialog.querySelector<HTMLElement>('[autofocus]')?.focus();
+    });
+  }
+
+  protected dismissDelayDialog(): void {
+    const dialog = this.delayDialog?.nativeElement;
+    if (dialog?.open) {
+      dialog.close();
+    }
+  }
+
+  protected onDelayDialogClosed(): void {
+    const previousElement = this.previouslyFocusedElement;
+    this.previouslyFocusedElement = null;
+    if (previousElement?.isConnected) {
+      previousElement.focus();
+      return;
+    }
+    document.getElementById('traveler-trip-heading')?.focus();
+  }
+
+  private resetDelayAlert(): void {
+    this.delayTransitionBaseline = undefined;
+    this.delayDialogOpenToken += 1;
+    const dialog = this.delayDialog?.nativeElement;
+    if (dialog?.open) {
+      dialog.close();
+    }
+  }
+
+  private projectTravelerTrip(value: unknown): TravelerTripState {
+    if (value === null) {
+      return { kind: 'empty' };
+    }
+    if (!isObjectRecord(value)) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+
+    // Check ownership before inspecting or projecting any other trip field.
+    if (value['userId'] !== OWNER_ID) {
+      return { kind: 'unavailable', message: 'No eligible trip is available.' };
+    }
+    if (value['tripId'] !== undefined && value['tripId'] !== TRIP_ID) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+
+    const rawTracking = value['tracking'];
+    let lifecycle: 'not_started' | 'in_progress';
+    let currentIndex: number | undefined;
+    let tracking: Record<string, unknown> | undefined;
+
+    if (rawTracking === undefined) {
+      if (value['status'] !== 'booked') {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+      lifecycle = 'not_started';
+    } else {
+      if (!isObjectRecord(rawTracking)) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+      tracking = rawTracking;
+      const trackingStatus = tracking['status'];
+      if (trackingStatus === 'completed') {
+        return { kind: 'empty' };
+      }
+      if (trackingStatus !== 'not_started' && trackingStatus !== 'in_progress') {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+      lifecycle = trackingStatus;
+
+      const storedIndex = tracking['currentCheckpointIndex'];
+      if (storedIndex !== undefined) {
+        if (!Number.isInteger(storedIndex) || (storedIndex as number) < 0) {
+          return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+        }
+        currentIndex = storedIndex as number;
+      }
+
+      if (
+        tracking['delayTriggered'] !== undefined &&
+        typeof tracking['delayTriggered'] !== 'boolean'
+      ) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+      if (
+        tracking['driftHrs'] !== undefined &&
+        (typeof tracking['driftHrs'] !== 'number' || !Number.isFinite(tracking['driftHrs']))
+      ) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+    }
+
+    const rawDays = value['days'];
+    if (!Array.isArray(rawDays) || rawDays.length === 0) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+    const preview = lifecycle === 'not_started';
+    const selectedIndex = preview ? 0 : currentIndex!;
+    const activities: TripActivityView[] = [];
+    const days: TripDayView[] = [];
+    let overallIndex = 0;
+    for (let dayIndex = 0; dayIndex < rawDays.length; dayIndex += 1) {
+      const rawDay = rawDays[dayIndex];
+      if (!isObjectRecord(rawDay) || !Array.isArray(rawDay['activities'])) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+      if (
+        (rawDay['day'] !== undefined &&
+          rawDay['day'] !== null &&
+          (typeof rawDay['day'] !== 'number' ||
+            !Number.isInteger(rawDay['day']) ||
+            rawDay['day'] < 1)) ||
+        (rawDay['theme'] !== undefined &&
+          rawDay['theme'] !== null &&
+          typeof rawDay['theme'] !== 'string')
+      ) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+
+      const dayStartIndex = overallIndex;
+      const dayActivities: TripActivityView[] = [];
+      for (const rawActivity of rawDay['activities']) {
+        if (!isObjectRecord(rawActivity)) {
+          return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+        }
+        const fields = ['time', 'place', 'description', 'type'] as const;
+        if (fields.some((field) => rawActivity[field] !== undefined && rawActivity[field] !== null && typeof rawActivity[field] !== 'string')) {
+          return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+        }
+        const rawType = rawActivity['type'] as string | null | undefined;
+        const activity: TripActivityView = {
+          overallNumber: overallIndex + 1,
+          activityNumber: dayActivities.length + 1,
+          activityCount: 0,
+          time: this.notProvidedUnlessString(rawActivity['time']),
+          place: this.notProvidedUnlessString(rawActivity['place']),
+          description: this.notProvidedUnlessString(rawActivity['description']),
+          type: rawType == null
+            ? NOT_PROVIDED
+            : this.activityTypeLabel(rawType),
+          isSelected: overallIndex === selectedIndex,
+        };
+        dayActivities.push(activity);
+        activities.push(activity);
+        overallIndex += 1;
+      }
+      for (const activity of dayActivities) {
+        activity.activityCount = dayActivities.length;
+      }
+
+      const storedDay = rawDay['day'];
+      const theme = this.notProvidedUnlessString(rawDay['theme']);
+      days.push({
+        ordinal: dayIndex + 1,
+        heading: `Day ${typeof storedDay === 'number' ? storedDay : dayIndex + 1}`,
+        ...(theme !== NOT_PROVIDED ? { theme } : {}),
+        isSelected: selectedIndex >= dayStartIndex && selectedIndex < overallIndex,
+        activities: dayActivities,
+      });
+    }
+    if (activities.length === 0) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+
+    if (lifecycle === 'in_progress') {
+      if (currentIndex === undefined || currentIndex >= activities.length) {
+        return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+      }
+    } else if (currentIndex !== undefined && currentIndex >= activities.length) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+
+    const currentActivity = activities[selectedIndex];
+    const nextActivity = preview ? undefined : activities[selectedIndex + 1];
+    const delayTriggered = tracking?.['delayTriggered'];
+    const currentDay = days.find((day) => day.isSelected);
+    if (!currentDay) {
+      return { kind: 'unavailable', message: 'Trip data is unavailable.' };
+    }
+    const currentActivityPosition = currentActivity.activityNumber;
+    const overallPositionLabel = `Overall activity ${selectedIndex + 1} of ${activities.length}`;
+    const dayPositionLabel = `Day ${currentDay.ordinal} of ${days.length}`;
+    const activityPositionLabel =
+      `Activity ${currentActivityPosition} of ${currentActivity.activityCount}`;
+    const railAccessibleLabel = preview
+      ? `Preview only: Day ${currentDay.ordinal} of ${days.length}, Activity ${currentActivityPosition} of ${currentActivity.activityCount}, overall activity ${selectedIndex + 1} of ${activities.length}.`
+      : `Current progress: ${dayPositionLabel}, ${activityPositionLabel}, overall activity ${selectedIndex + 1} of ${activities.length}.`;
+
+    return {
+      kind: 'live',
+      trip: {
+        statusLabel: preview ? 'Planned / Not started' : 'In progress',
+        isPreview: preview,
+        dayPositionLabel,
+        activityPositionLabel,
+        overallPositionLabel,
+        railAccessibleLabel,
+        railPositionPercent: activities.length > 1
+          ? (selectedIndex / (activities.length - 1)) * 100
+          : 0,
+        totalActivities: activities.length,
+        days,
+        currentActivity,
+        nextActivity,
+        delayTriggeredLabel: typeof delayTriggered === 'boolean' ? String(delayTriggered) : NOT_PROVIDED,
+        driftHoursLabel: typeof tracking?.['driftHrs'] === 'number'
+          ? String(tracking['driftHrs'])
+          : NOT_PROVIDED,
+        delayTone: delayTriggered === true
+          ? 'triggered'
+          : delayTriggered === false
+            ? 'not-triggered'
+            : 'unknown',
+      },
+    };
+  }
+
+  private notProvidedUnlessString(value: unknown): string {
+    return typeof value === 'string' ? value : NOT_PROVIDED;
+  }
+
+  private activityTypeLabel(type: string): string {
+    switch (type) {
+      case 'Transport':
+        return 'travel';
+      case 'Meal':
+        return 'eating';
+      case 'Accommodation':
+        return 'hotel';
+      default:
+        return type;
+    }
+  }
 
   protected applyQuickPrompt(quick: QuickPrompt): void {
     this.prompt = quick.text;

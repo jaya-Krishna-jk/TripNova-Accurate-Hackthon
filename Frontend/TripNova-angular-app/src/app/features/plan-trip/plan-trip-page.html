@@ -1,4 +1,283 @@
 <div class="mx-auto flex w-full max-w-7xl flex-col space-y-12">
+  <!-- Read-only owner-verified live trip -->
+  <section
+    aria-labelledby="traveler-trip-heading"
+    aria-live="polite"
+    class="rounded-2xl bg-surface-container-lowest p-5 shadow-sm sm:p-7"
+    data-testid="traveler-trip-section"
+  >
+    <h2 id="traveler-trip-heading" tabindex="-1" class="font-headline text-title-lg text-primary">Your trip</h2>
+    @let tripState = travelerTripState();
+
+    @switch (tripState.kind) {
+      @case ('loading') {
+        <p class="mt-4 text-body-md text-on-surface-variant" role="status" aria-busy="true">
+          Checking for your live trip…
+        </p>
+      }
+      @case ('empty') {
+        <div class="mt-4 rounded-xl bg-surface-container-low p-4">
+          <p class="text-title-sm text-on-surface">No eligible trip is available.</p>
+          <p class="mt-1 text-body-md text-on-surface-variant">
+            Use the trip planner below to plan your next journey.
+          </p>
+        </div>
+      }
+      @case ('unavailable') {
+        <div class="mt-4 rounded-xl bg-surface-container-low p-4" role="status">
+          <p class="text-title-sm text-on-surface">Trip unavailable</p>
+          <p class="mt-1 text-body-md text-on-surface-variant">{{ tripState.message }}</p>
+        </div>
+      }
+      @case ('error') {
+        <div class="mt-4 flex flex-col items-start gap-3 rounded-xl bg-error-container p-4 text-on-error-container sm:flex-row sm:items-center sm:justify-between" role="alert">
+          <div>
+            <p class="text-title-sm">Live trip updates are unavailable</p>
+            <p class="mt-1 text-body-md">We couldn't read your trip right now. Try again when your connection is available.</p>
+          </div>
+          <button
+            type="button"
+            class="rounded-lg bg-surface-container-lowest px-4 py-2 text-label-md font-semibold text-on-surface shadow-sm hover:bg-surface-container"
+            (click)="retryTripListener()"
+          >
+            Try again
+          </button>
+        </div>
+      }
+      @case ('live') {
+        <div class="mt-5 space-y-5" data-testid="traveler-trip-card">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-title-md font-semibold text-on-surface">{{ tripState.trip.statusLabel }}</p>
+            <span class="w-fit rounded-full bg-primary-container/30 px-3 py-1 text-label-sm font-semibold text-primary">
+              Trip TN-3UP9HH
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 rounded-xl bg-surface-container-low p-3 sm:grid-cols-3 sm:p-4">
+            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
+              {{ tripState.trip.dayPositionLabel }}
+            </p>
+            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
+              {{ tripState.trip.activityPositionLabel }}
+              @if (tripState.trip.isPreview) {
+                <span class="ml-1 text-label-sm font-bold text-secondary">Preview</span>
+              }
+            </p>
+            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
+              {{ tripState.trip.overallPositionLabel }}
+              @if (tripState.trip.isPreview) {
+                <span class="ml-1 text-label-sm font-bold text-secondary">Preview</span>
+              }
+            </p>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-2">
+            <article class="min-w-0 rounded-xl bg-surface-container-low p-4">
+              <h3 class="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
+                {{ tripState.trip.isPreview ? 'First activity preview' : 'Current activity' }}
+              </h3>
+              <dl class="mt-3 space-y-2 break-words text-body-md">
+                <div>
+                  <dt class="inline font-semibold text-on-surface">Activity: </dt>
+                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.type }}</dd>
+                </div>
+                <div>
+                  <dt class="inline font-semibold text-on-surface">Location: </dt>
+                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.place }}</dd>
+                </div>
+                <div>
+                  <dt class="inline font-semibold text-on-surface">Time: </dt>
+                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.time }}</dd>
+                </div>
+                <div>
+                  <dt class="inline font-semibold text-on-surface">Details: </dt>
+                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.description }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="min-w-0 rounded-xl bg-surface-container-low p-4">
+              <h3 class="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">Next activity</h3>
+              @if (tripState.trip.nextActivity; as nextActivity) {
+                <dl class="mt-3 space-y-2 break-words text-body-md">
+                  <div>
+                    <dt class="inline font-semibold text-on-surface">Activity: </dt>
+                    <dd class="inline text-on-surface-variant">{{ nextActivity.type }}</dd>
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-on-surface">Location: </dt>
+                    <dd class="inline text-on-surface-variant">{{ nextActivity.place }}</dd>
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-on-surface">Time: </dt>
+                    <dd class="inline text-on-surface-variant">{{ nextActivity.time }}</dd>
+                  </div>
+                  <div>
+                    <dt class="inline font-semibold text-on-surface">Details: </dt>
+                    <dd class="inline text-on-surface-variant">{{ nextActivity.description }}</dd>
+                  </div>
+                </dl>
+              } @else {
+                <p class="mt-3 text-body-md text-on-surface-variant">Not provided</p>
+              }
+            </article>
+          </div>
+
+          <div class="grid gap-3 rounded-xl border border-outline-variant/50 p-4 sm:grid-cols-2">
+            <p
+              class="text-body-md"
+              [class.text-error]="tripState.trip.delayTone === 'triggered'"
+              [class.text-on-surface]="tripState.trip.delayTone !== 'triggered'"
+              [attr.role]="tripState.trip.delayTone === 'triggered' ? 'status' : null"
+            >
+              <span class="font-semibold">Delay alert: </span>
+              @switch (tripState.trip.delayTone) {
+                @case ('triggered') { Triggered }
+                @case ('not-triggered') { Not triggered }
+                @default { Not provided }
+              }
+            </p>
+            <p class="text-body-md text-on-surface">
+              <span class="font-semibold">Drift: </span>
+              <span>{{ tripState.trip.driftHoursLabel }}{{ tripState.trip.driftHoursLabel === 'Not provided' ? '' : ' hrs' }}</span>
+            </p>
+          </div>
+
+          <section aria-label="Itinerary progress" class="rounded-xl bg-surface-container-low p-4 sm:p-5">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 class="text-title-sm font-semibold text-on-surface">Itinerary progress</h3>
+              <p class="text-body-sm text-on-surface-variant">
+                {{ tripState.trip.isPreview ? 'Preview only — tracking has not started.' : 'Position from the latest trip update.' }}
+              </p>
+            </div>
+            <div
+              class="relative mx-2 mt-5 h-5"
+              [attr.role]="tripState.trip.isPreview ? 'img' : 'progressbar'"
+              [attr.aria-label]="tripState.trip.railAccessibleLabel"
+              [attr.aria-valuemin]="tripState.trip.isPreview ? null : 1"
+              [attr.aria-valuemax]="tripState.trip.isPreview ? null : tripState.trip.totalActivities"
+              [attr.aria-valuenow]="tripState.trip.isPreview ? null : tripState.trip.currentActivity.overallNumber"
+            >
+              <div class="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-outline-variant" aria-hidden="true"></div>
+              <span
+                class="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-container-lowest bg-primary shadow-sm"
+                [class.bg-secondary]="tripState.trip.isPreview"
+                [style.left.%]="tripState.trip.railPositionPercent"
+                aria-hidden="true"
+              ></span>
+            </div>
+          </section>
+
+          <section aria-labelledby="itinerary-heading" class="space-y-3">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 id="itinerary-heading" class="text-title-sm font-semibold text-on-surface">Your itinerary</h3>
+              @if (tripState.trip.isPreview) {
+                <span class="rounded-full bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
+                  Day 1 / Activity 1 preview
+                </span>
+              }
+            </div>
+            <ol class="space-y-3">
+              @for (day of tripState.trip.days; track day.ordinal) {
+                <li
+                  class="min-w-0 rounded-xl border p-3 sm:p-4"
+                  [class.border-primary]="day.isSelected"
+                  [class.bg-primary-fixed]="day.isSelected"
+                  [class.border-outline-variant]="!day.isSelected"
+                  [class.bg-surface-container-lowest]="!day.isSelected"
+                >
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <h4 class="text-title-sm font-semibold text-on-surface">{{ day.heading }}</h4>
+                      @if (day.theme) {
+                        <p class="mt-0.5 break-words text-body-sm text-on-surface-variant">{{ day.theme }}</p>
+                      }
+                    </div>
+                    @if (day.isSelected) {
+                      <span class="rounded-full bg-primary-container px-2.5 py-1 text-label-sm font-semibold text-on-primary">
+                        {{ tripState.trip.isPreview ? 'Preview day' : 'Current day' }}
+                      </span>
+                    }
+                  </div>
+
+                  @if (day.activities.length > 0) {
+                    <ol class="mt-3 space-y-2">
+                      @for (activity of day.activities; track activity.overallNumber) {
+                        <li
+                          class="min-w-0 rounded-lg border p-3"
+                          [class.border-primary]="activity.isSelected && !tripState.trip.isPreview"
+                          [class.border-secondary]="activity.isSelected && tripState.trip.isPreview"
+                          [class.bg-surface-container]="activity.isSelected"
+                          [class.border-outline-variant]="!activity.isSelected"
+                          [class.bg-surface-container-lowest]="!activity.isSelected"
+                          [attr.aria-current]="activity.isSelected && !tripState.trip.isPreview ? 'step' : null"
+                        >
+                          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <p class="text-body-md font-semibold text-on-surface">
+                              Activity {{ activity.activityNumber }} of {{ activity.activityCount }}
+                            </p>
+                            @if (activity.isSelected) {
+                              <span class="text-label-sm font-bold text-primary">
+                                {{ tripState.trip.isPreview ? 'Preview activity' : 'Current activity' }}
+                              </span>
+                            }
+                          </div>
+                          <dl class="mt-2 grid gap-x-4 gap-y-1 break-words text-body-sm sm:grid-cols-2">
+                            <div><dt class="inline font-semibold text-on-surface">Type: </dt><dd class="inline text-on-surface-variant">{{ activity.type }}</dd></div>
+                            <div><dt class="inline font-semibold text-on-surface">Place: </dt><dd class="inline text-on-surface-variant">{{ activity.place }}</dd></div>
+                            <div><dt class="inline font-semibold text-on-surface">Time: </dt><dd class="inline text-on-surface-variant">{{ activity.time }}</dd></div>
+                            <div class="sm:col-span-2"><dt class="inline font-semibold text-on-surface">Details: </dt><dd class="inline text-on-surface-variant">{{ activity.description }}</dd></div>
+                          </dl>
+                        </li>
+                      }
+                    </ol>
+                  } @else {
+                    <p class="mt-3 text-body-sm text-on-surface-variant">No activities provided.</p>
+                  }
+                </li>
+              }
+            </ol>
+          </section>
+        </div>
+      }
+    }
+  </section>
+
+  <dialog
+    #delayDialog
+    aria-labelledby="delay-dialog-heading"
+    aria-describedby="delay-dialog-message"
+    (close)="onDelayDialogClosed()"
+    class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl bg-surface-container-lowest p-0 text-on-surface shadow-2xl backdrop:bg-black/50"
+  >
+    <div class="space-y-5 p-5 sm:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <h2 id="delay-dialog-heading" class="font-headline text-title-lg text-primary">
+          Delay alert
+        </h2>
+        <button
+          type="button"
+          autofocus
+          aria-label="Close delay alert"
+          class="shrink-0 rounded-lg px-3 py-2 text-label-md font-semibold text-on-surface-variant hover:bg-surface-container focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          (click)="dismissDelayDialog()"
+        >
+          Close
+        </button>
+      </div>
+      <p id="delay-dialog-message" class="break-words text-body-md leading-relaxed text-on-surface">
+        {{ delayAlertMessage() }}
+      </p>
+      <button
+        type="button"
+        class="w-full rounded-xl bg-primary px-4 py-3 text-label-md font-semibold text-on-primary hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        (click)="dismissDelayDialog()"
+      >
+        View the recommendations
+      </button>
+    </div>
+  </dialog>
+
   <!-- Hero & AI trip prompt -->
   <section
     class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
