@@ -1,0 +1,129 @@
+<div class="min-h-screen bg-surface text-on-surface">
+  <!-- Sidebar -->
+  <aside
+    class="fixed left-0 top-0 z-50 hidden h-screen w-72 flex-col justify-between bg-surface-container-lowest py-6 shadow-[0_1px_8px_rgba(0,0,0,0.04)] lg:flex"
+    aria-label="Primary navigation"
+  >
+    <div class="px-6">
+      <a routerLink="/" class="mb-8 flex items-center gap-3">
+        <span
+          class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-container text-on-primary"
+          aria-hidden="true"
+        >
+          <span class="material-symbols-outlined text-[22px]">travel_explore</span>
+        </span>
+        <span class="flex flex-col">
+          <span class="font-headline text-headline-sm leading-tight tracking-tight text-primary">Trip Nova</span>
+          <span class="text-label-sm uppercase tracking-widest text-secondary">AI Travel Concierge</span>
+        </span>
+      </a>
+
+      <nav class="space-y-1.5">
+        @for (item of navItems; track item.label) {
+          @if (item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="bg-primary-container text-on-primary shadow-sm border-l-4 border-secondary-container"
+              [routerLinkActiveOptions]="{ exact: true }"
+              #rla="routerLinkActive"
+              [attr.aria-current]="rla.isActive ? 'page' : null"
+              class="flex items-center justify-between rounded-lg px-3.5 py-2.5 text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
+            >
+              <span class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">{{ item.icon }}</span>
+                <span class="text-label-md">{{ item.label }}</span>
+              </span>
+            </a>
+          } @else {
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              class="flex w-full cursor-not-allowed items-center justify-between rounded-lg px-3.5 py-2.5 text-left text-on-surface-variant/80"
+            >
+              <span class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">{{ item.icon }}</span>
+                <span class="text-label-md">{{ item.label }}</span>
+              </span>
+              @if (item.badge) {
+                <span class="rounded-full bg-secondary-container px-2 py-0.5 text-label-sm font-semibold text-on-secondary-container">
+                  {{ item.badge }}
+                </span>
+              }
+            </button>
+          }
+        }
+      </nav>
+    </div>
+
+    <div class="space-y-4 px-6">
+      <div class="flex items-center gap-2.5 rounded-lg bg-surface-container-low p-3">
+        <span class="material-symbols-outlined text-[18px] text-tertiary-container" aria-hidden="true">verified</span>
+        <div class="flex flex-col">
+          <span class="text-label-sm font-bold uppercase tracking-wider text-tertiary-container">IATA &amp; ASTA Verified</span>
+          <span class="text-body-sm text-on-surface-variant">Private AI Concierge</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between rounded-xl bg-surface-container p-3">
+        <div class="flex items-center gap-3">
+          <span
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-primary-fixed text-primary ring-2 ring-secondary-container/40"
+            aria-hidden="true"
+          >
+            <span class="material-symbols-outlined text-[20px]">person</span>
+          </span>
+          <div class="flex flex-col">
+            <span class="text-title-sm font-semibold leading-snug text-on-surface">Guest Traveller</span>
+            <a routerLink="/login" class="text-label-sm font-medium text-secondary hover:underline">Sign in</a>
+          </div>
+        </div>
+        <span class="material-symbols-outlined p-1 text-[20px] text-on-surface-variant" aria-hidden="true">more_vert</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="lg:pl-72">
+    <!-- Top bar -->
+    <header
+      class="fixed left-0 right-0 top-0 z-40 flex h-16 items-center justify-between bg-surface/90 px-4 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-8 lg:left-72"
+    >
+      <a routerLink="/" class="flex items-center gap-2 lg:hidden">
+        <span class="material-symbols-outlined text-[22px] text-primary" aria-hidden="true">travel_explore</span>
+        <span class="font-headline text-headline-sm text-primary">Trip Nova</span>
+      </a>
+      <label class="relative hidden w-96 md:block">
+        <span class="sr-only">Search</span>
+        <span
+          class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
+          aria-hidden="true"
+        >search</span>
+        <input
+          type="search"
+          placeholder="Search trips, dossiers, and bookings..."
+          class="w-full rounded-lg bg-surface-container-lowest py-1.5 pl-9 pr-4 text-body-sm text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.02)] transition-all placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-1 focus:ring-primary-container"
+        />
+      </label>
+      <div class="flex items-center gap-3 sm:gap-5">
+        <div class="hidden items-center gap-2 rounded-full bg-surface-container-low px-3 py-1 xl:flex">
+          <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-tertiary-fixed-dim" aria-hidden="true"></span>
+          <span class="text-label-sm font-medium text-on-surface-variant">Global Advisory: Normal Operations</span>
+        </div>
+        <div class="flex items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-1 shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+          <span class="text-label-md font-semibold text-on-surface">INR (₹)</span>
+          <span class="material-symbols-outlined text-[16px] text-on-surface-variant" aria-hidden="true">expand_more</span>
+        </div>
+        <a
+          routerLink="/login"
+          class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-fixed text-primary"
+          aria-label="Account"
+        >
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">person</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="min-h-screen w-full bg-surface px-4 pb-12 pt-24 sm:px-8">
+      <router-outlet />
+    </main>
+  </div>
+</div>

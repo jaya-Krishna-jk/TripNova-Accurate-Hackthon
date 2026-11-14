@@ -1,14 +1,14 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DemoUser, RealtimeDatabaseService } from './realtime-database.service';
+import { DemoUser, RealtimeDatabaseService } from '../../realtime-database.service';
 
 @Component({
   imports: [FormsModule],
-  selector: 'app-root',
-  styleUrl: './app.css',
-  templateUrl: './app.html',
+  selector: 'app-login-page',
+  styleUrl: './login-page.css',
+  templateUrl: './login-page.html',
 })
-export class App {
+export class LoginPage {
   protected name = '';
   protected username = '';
   protected password = '';

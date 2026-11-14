@@ -1,3 +1,18 @@
+## TripNova quick start
+
+Requires **Node ≥ 22.22.3** (Angular CLI 22).
+
+```bash
+# backend (FastAPI, port 8000)
+cd smart-travel-backend && uvicorn app.main:app --reload
+
+# frontend (dev server, port 4200)
+cd Frontend/TripNova-angular-app && npm install && npm start
+```
+
+The API base URL is read from `src/environments/environment.ts` (`apiBaseUrl`, default `http://localhost:8000`).
+The **Generate My Trip** button on the home screen posts the prompt to `POST {apiBaseUrl}/travel/chat`.
+
 # TripNovaAngularApp
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.7.

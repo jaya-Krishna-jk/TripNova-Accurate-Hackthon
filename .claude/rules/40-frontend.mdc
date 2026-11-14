@@ -1,11 +1,21 @@
 ---
 description: Frontend engineering rules
-globs: ["frontend/**"]
+globs: ["Frontend/**"]
 ---
 
 # Frontend Rules
 
-- No frontend has been set up yet.
-- Backend API runs at `smart-travel-backend/` (FastAPI on default port 8000).
-- When a frontend is added, update this file with the actual framework, conventions, and directory structure.
-- API base URL via environment config, never hardcoded.
+- Frontend lives in `Frontend/TripNova-angular-app/` — Angular 22 (standalone components, signals, SSR/prerender), Tailwind v4, Vitest.
+- Requires Node ≥ 22.22.3 (Angular CLI check). Run with `npm start` (dev server on 4200).
+- Backend API runs at `smart-travel-backend/` (FastAPI on default port 8000). Routes are **not** `/api/`-prefixed.
+- API base URL comes from `src/environments/environment*.ts` (`apiBaseUrl`) — never hardcode it.
+- Structure:
+  - `src/app/core/models/` — API request/response types mirroring `smart-travel-backend/app/models.py`
+  - `src/app/core/services/` — `HttpClient` wrappers (one service per backend area, e.g. `TravelApiService`)
+  - `src/app/layout/` — app chrome (`dashboard-shell`: sidebar + top bar + `<router-outlet>`)
+  - `src/app/features/<feature>/` — routed pages (`*-page.ts/html`) and feature components
+- File naming follows Angular 20+ style: `plan-trip-page.ts` exporting `PlanTripPage` (no `.component` suffix).
+- Design tokens (colours, type scale, fonts) are defined once in `src/styles.css` under `@theme`; use those utilities
+  (`bg-surface-container`, `text-headline-xl`, `font-headline`) rather than raw hex values.
+- Every network call must have loading, error and (where applicable) empty states.
+- Co-locate specs (`*.spec.ts`); use `provideHttpClientTesting()` for service/page tests — never hit the real backend in tests.
