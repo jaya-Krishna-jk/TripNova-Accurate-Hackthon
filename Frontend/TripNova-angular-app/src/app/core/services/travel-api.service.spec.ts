@@ -52,6 +52,31 @@ describe('TravelApiService', () => {
     req.flush({});
   });
 
+  it('posts the selected plan to /travel/plan-details', () => {
+    const request = {
+      planId: '2',
+      planType: 'Comfort First',
+      planName: 'Ooty Family Explorer',
+      source: 'Hyderabad',
+      destination: 'Ooty',
+      durationDays: 4,
+      summary: {
+        description: '',
+        estimatedCost: 52000,
+        transportMode: 'Private cab',
+        hotelCategory: '3 Star Hotel',
+        bestFor: 'Families',
+      },
+      highlights: [],
+    };
+    service.planDetails(request).subscribe();
+
+    const req = http.expectOne(`${environment.apiBaseUrl}/travel/plan-details`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(request);
+    req.flush({});
+  });
+
   it('maps a network failure to a backend-unreachable message', () => {
     const error = new HttpErrorResponse({ status: 0, statusText: 'Unknown Error' });
     expect(service.getErrorMessage(error)).toContain('Could not reach the TripNova API');

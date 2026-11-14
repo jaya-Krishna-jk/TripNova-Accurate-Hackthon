@@ -1,7 +1,9 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
-import { ChatResponse, TravelPlan, TripDetails } from '../../core/models/travel.models';
+import { PlanDetailsRequest, TravelPlan, TripDetails } from '../../core/models/travel.models';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 
 @Component({
@@ -12,6 +14,11 @@ import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 export class ItinerarySuggestionsPage implements OnInit {
   private readonly tripState = inject(TripStateService);
   private readonly router = inject(Router);
+  private readonly travelApi = inject(TravelApiService);
+
+  /** planId currently being expanded into a detailed itinerary, if any. */
+  protected readonly loadingPlanId = signal<string | null>(null);
+  protected readonly errorMessage = signal('');
 
   protected tripDetails!: TripDetails;
   protected plans: TravelPlan[] = [];
@@ -71,8 +78,33 @@ export class ItinerarySuggestionsPage implements OnInit {
     return new Date(dateStr);
   }
 
-  protected selectPlan(plan: TravelPlan): void {
-    // Will navigate to detailed day-wise itinerary in a future iteration
-    console.log('Selected plan:', plan.planId);
+  protected async selectPlan(plan: TravelPlan): Promise<void> {
+    if (this.loadingPlanId()) return;
+
+    this.loadingPlanId.set(plan.planId);
+    this.errorMessage.set('');
+
+    const request: PlanDetailsRequest = {
+      planId: plan.planId,
+      planType: plan.planType,
+      planName: plan.planName,
+      source: this.tripDetails.source,
+      destination: this.tripDetails.destination,
+      durationDays: this.tripDetails.durationDays,
+      summary: plan.summary,
+      highlights: plan.highlights,
+      tripDetails: this.tripDetails,
+    };
+
+    try {
+      const details = await firstValueFrom(this.travelApi.planDetails(request));
+      this.tripState.selectedPlan.set(plan);
+      this.tripState.planDetails.set(details);
+      this.router.navigate(['/itinerary-details']);
+    } catch (error) {
+      this.errorMessage.set(this.travelApi.getErrorMessage(error));
+    } finally {
+      this.loadingPlanId.set(null);
+    }
   }
 }

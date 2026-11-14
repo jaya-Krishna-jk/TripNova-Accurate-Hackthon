@@ -46,6 +46,13 @@
     </p>
   </div>
 
+  @if (errorMessage()) {
+    <div role="alert" class="flex items-start gap-2.5 rounded-lg border border-error/30 bg-error-container p-4 text-body-md text-on-error-container">
+      <span class="material-symbols-outlined text-[20px]" aria-hidden="true">error</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
   <!-- Plan Cards Grid -->
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     @for (plan of plans; track plan.planId) {
@@ -136,12 +143,18 @@
           <button
             type="button"
             (click)="selectPlan(plan)"
-            class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-container py-2.5 px-4 text-label-md font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary"
+            [disabled]="loadingPlanId() !== null"
+            class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-container py-2.5 px-4 text-label-md font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
             [class.border-2]="isRecommended(plan)"
             [class.border-[#C9A227]]="isRecommended(plan)"
           >
-            <span>Select This Plan</span>
-            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+            @if (loadingPlanId() === plan.planId) {
+              <span class="material-symbols-outlined animate-spin text-[16px]" aria-hidden="true">progress_activity</span>
+              <span>Crafting your day-wise itinerary…</span>
+            } @else {
+              <span>Select This Plan</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+            }
           </button>
         </div>
       </div>

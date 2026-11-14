@@ -10,6 +10,7 @@ from app.prompts import (
     EXTRACT_TRAVEL_PROMPT,
     VALIDATION_PROMPT,
     PLAN_SUMMARY_PROMPT,
+    PLAN_ITINERARY_PROMPT,
     PLAN_DETAILS_PROMPT
 )
 
@@ -235,34 +236,39 @@ Hotel Preference:
 # GENERATE DAY-WISE ITINERARY
 # --------------------------------------------------
 
-def generate_plan_details(
-    request_data: dict
+def generate_plan_itinerary(
+    plan_payload: dict
 ):
+
+    trip_details = plan_payload.get("tripDetails") or {}
 
     user_prompt = f"""
 Plan ID:
-{request_data["planId"]}
+{plan_payload["planId"]}
 
 Plan Type:
-{request_data["planType"]}
+{plan_payload["planType"]}
 
 Plan Name:
-{request_data["planName"]}
+{plan_payload["planName"]}
 
 Source:
-{request_data["source"]}
+{plan_payload["source"]}
 
 Destination:
-{request_data["destination"]}
+{plan_payload["destination"]}
 
 Duration:
-{request_data["durationDays"]} days
+{plan_payload["durationDays"]} days
 
 Summary:
-{json.dumps(request_data["summary"], ensure_ascii=False)}
+{json.dumps(plan_payload["summary"], ensure_ascii=False)}
 
 Highlights:
-{json.dumps(request_data["highlights"], ensure_ascii=False)}
+{json.dumps(plan_payload["highlights"], ensure_ascii=False)}
+
+Trip Details:
+{json.dumps(trip_details, ensure_ascii=False)}
 
 IMPORTANT
 
@@ -272,8 +278,57 @@ Last day should include return journey.
 """
 
     return call_model(
-        PLAN_DETAILS_PROMPT,
+        PLAN_ITINERARY_PROMPT,
         user_prompt
+    )
+
+
+# --------------------------------------------------
+# GENERATE DETAILED TRAVEL DOSSIER
+# --------------------------------------------------
+
+def generate_plan_details(
+    request_data: dict
+):
+
+    # Everything except the itinerary itself is the plan payload.
+    plan_payload = {
+        key: value
+        for key, value in request_data.items()
+        if key != "days" and value is not None
+    }
+
+    days = request_data.get("days")
+
+    # The client only has plan cards, so build the base day-wise
+    # itinerary here when it was not supplied.
+    if not days:
+        days = generate_plan_itinerary(
+            plan_payload
+        ).get("days", [])
+
+    existing_itinerary = {
+        "planId": request_data["planId"],
+        "days": days
+    }
+
+    # The prompt is full of literal JSON braces, so substitute the
+    # placeholders directly instead of using str.format.
+    system_prompt = (
+        PLAN_DETAILS_PROMPT
+        .replace(
+            "{PLAN_PAYLOAD}",
+            json.dumps(plan_payload, ensure_ascii=False, indent=2)
+        )
+        .replace(
+            "{EXISTING_ITINERARY}",
+            json.dumps(existing_itinerary, ensure_ascii=False, indent=2)
+        )
+    )
+
+    return call_model(
+        system_prompt,
+        "Enhance the EXISTING_ITINERARY into the travel dossier JSON."
     )
 
 
