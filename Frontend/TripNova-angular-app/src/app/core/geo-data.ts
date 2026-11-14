@@ -1,0 +1,20 @@
+export type GeoLookup = Record<string, { lat: number; lon: number }>;
+
+export const GEO_LOOKUP: GeoLookup = {
+  'hyderabad bus station': { lat: 17.3786, lon: 78.4867 },
+  'thirupathi bus station': { lat: 13.6288, lon: 79.4192 },
+  'budget hotel': { lat: 13.63, lon: 79.42 },
+  'ttd gardens': { lat: 13.63, lon: 79.42 },
+  'sri venkateswara temple': { lat: 13.6833, lon: 79.3472 },
+  'sri padmavathi ammavari temple': { lat: 13.604, lon: 79.457 },
+  'akasa ganga': { lat: 13.677, lon: 79.348 },
+  'silathoranam': { lat: 13.679, lon: 79.356 },
+  'local market': { lat: 13.6285, lon: 79.4195 },
+};
+
+export const ROUTE_WAYPOINTS: Record<string, Array<{ lat: number; lon: number; label: string }>> = {
+  'hyderabad bus station|thirupathi bus station': [
+    { lat: 15.828, lon: 78.037, label: 'Kurnool' },
+    { lat: 14.467, lon: 78.824, label: 'Kadapa' },
+  ],
+};

@@ -1,0 +1,61 @@
+{
+  "planId": "1",
+  "planType": "Trip",
+  "planName": "Hyderabad to Thirupathi",
+  "source": "Hyderabad",
+  "destination": "Thirupathi",
+  "durationDays": 3,
+  "summary": {
+    "description": "Hyderabad to Thirupathi",
+    "estimatedCost": 2500,
+    "transportMode": "Public Bus",
+    "hotelCategory": "Budget Hotel",
+    "bestFor": "Pilgrimage"
+  },
+  "highlights": ["Temple visit"],
+  "days": [
+    {
+      "day": 1,
+      "theme": "Travel",
+      "daySummary": "Leave Hyderabad and arrive in Thirupathi",
+      "activities": [
+        { "time": "06:00 AM", "place": "Hyderabad Bus Station", "description": "depart Hyderabad Bus Station" },
+        { "time": "02:00 PM", "place": "Enroute", "description": "lunch enroute" },
+        { "time": "04:00 PM", "place": "Thirupathi Bus Station", "description": "arrive in Thirupathi Bus Station" },
+        { "time": "04:30 PM", "place": "Budget Hotel", "description": "hotel check-in" },
+        { "time": "05:30 PM", "place": "TTD Gardens", "description": "visit TTD Gardens" },
+        { "time": "07:30 PM", "place": "Local Market", "description": "dinner" },
+        { "time": "09:00 PM", "place": "Budget Hotel", "description": "back at hotel" }
+      ]
+    },
+    {
+      "day": 2,
+      "theme": "Pilgrimage",
+      "daySummary": "Temple day",
+      "activities": [
+        { "time": "06:00 AM", "place": "Sri Venkateswara Temple", "description": "darshan at Sri Venkateswara Temple" },
+        { "time": "10:00 AM", "place": "Temple Canteen", "description": "breakfast" },
+        { "time": "11:00 AM", "place": "Sri Padmavathi Ammavari Temple", "description": "visit Sri Padmavathi Ammavari Temple" },
+        { "time": "01:00 PM", "place": "Lunch Spot", "description": "lunch" },
+        { "time": "02:30 PM", "place": "Akasa Ganga", "description": "visit Akasa Ganga" },
+        { "time": "04:30 PM", "place": "Budget Hotel", "description": "return to the hotel" },
+        { "time": "07:00 PM", "place": "Local Market", "description": "local market" },
+        { "time": "08:30 PM", "place": "Restaurant", "description": "dinner" },
+        { "time": "10:00 PM", "place": "Budget Hotel", "description": "hotel" }
+      ]
+    },
+    {
+      "day": 3,
+      "theme": "Return",
+      "daySummary": "Return to Hyderabad",
+      "activities": [
+        { "time": "07:00 AM", "place": "Budget Hotel", "description": "check-out" },
+        { "time": "08:00 AM", "place": "Cafeteria", "description": "breakfast" },
+        { "time": "09:00 AM", "place": "Silathoranam", "description": "visit Silathoranam" },
+        { "time": "11:00 AM", "place": "Thirupathi Bus Station", "description": "depart Thirupathi Bus Station" },
+        { "time": "11:30 AM", "place": "Lunch Stop", "description": "lunch enroute" },
+        { "time": "07:30 PM", "place": "Hyderabad Bus Station", "description": "arrive in Hyderabad Bus Station" }
+      ]
+    }
+  ]
+}
