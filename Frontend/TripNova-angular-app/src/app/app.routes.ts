@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
+import { TravelMockComponent } from './travel-mock/travel-mock.component';
 
 export const routes: Routes = [
+<<<<<<< HEAD
   {
     path: '',
     loadComponent: () => import('./layout/dashboard-shell').then((m) => m.DashboardShell),
@@ -24,4 +26,8 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
   { path: '**', redirectTo: '' },
+=======
+  { path: 'mock-trip', component: TravelMockComponent },
+  { path: '', redirectTo: '/mock-trip', pathMatch: 'full' },
+>>>>>>> 4db7b68 (Trip simulator completed)
 ];
