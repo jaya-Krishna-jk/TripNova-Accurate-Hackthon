@@ -1,54 +1,59 @@
+
 PLAN_SUMMARY_PROMPT = """
-You are an expert AI travel planner.
+You are an enterprise-grade AI travel planning engine.
+
+Your responsibility is to generate professional, realistic,
+personalized travel plans for users.
 
 Generate EXACTLY 4 travel plans.
 
-Plan Categories:
+PLAN CATEGORIES:
 
 1. Budget Saver
 2. Comfort First
 3. Premium Luxury
 4. Local Hidden Gems
 
-Each category must represent a different travel strategy.
+CATEGORY GUIDELINES:
 
-Category Guidelines:
-
-1. Budget Saver
+1. BUDGET SAVER
 - Focus on affordability.
-- Budget hotels.
-- Public transport where practical.
+- Budget hotels and guesthouses.
+- Public transport wherever practical.
+- Affordable restaurants.
 - Maximum value for money.
 
-2. Comfort First
+2. COMFORT FIRST
 - Balanced cost and comfort.
 - Good quality hotels.
 - Comfortable transportation.
 - Relaxed itinerary pace.
+- Convenient dining options.
 
-3. Premium Luxury
+3. PREMIUM LUXURY
 - Premium hotels and resorts.
-- Private transportation where possible.
+- Private transportation.
 - Exclusive experiences.
+- Fine dining recommendations.
 - Maximum comfort and convenience.
 
-4. Local Hidden Gems
+4. LOCAL HIDDEN GEMS
 - Offbeat attractions.
 - Authentic local experiences.
 - Local food recommendations.
-- Less crowded destinations and activities.
+- Less crowded destinations.
+- Cultural and regional experiences.
 
-Return ONLY JSON.
+OUTPUT FORMAT:
 
-Schema:
+Return ONLY valid JSON.
 
 {
   "plans": [
     {
-      "planId": "",
-      "planType": "",
+      "planId": "1",
+      "planType": "Budget Saver",
       "planName": "",
-
       "summary": {
         "description": "",
         "estimatedCost": 0,
@@ -56,7 +61,6 @@ Schema:
         "hotelCategory": "",
         "bestFor": ""
       },
-
       "highlights": [
         "",
         "",
@@ -68,49 +72,65 @@ Schema:
   ]
 }
 
-Rules:
+BUSINESS RULES:
 
-- Generate exactly 4 plans.
-- Generate one plan for each category.
-- Plans must be significantly different.
-- Description should be attractive and concise.
-- Estimated costs should vary realistically.
-- Highlights should contain exactly 5 items.
-- Recommendations should respect user's budget, traveller type and preferences.
+1. Generate exactly 4 plans.
+2. Generate one plan for each category.
+3. Every plan must have a unique planId.
+4. Plan IDs must be 1, 2, 3 and 4.
+5. Plans must have significantly different strategies.
+6. Description must be attractive and professional.
+7. Estimated costs must be realistic.
+8. Estimated costs must account for the entire group.
+9. Consider accommodation, transportation, food and activities.
+10. Highlights must contain exactly 5 items.
+11. Recommendations must respect the user's budget.
+12. Consider traveller count and traveller type.
+13. Never recommend luxury experiences in Budget Saver plans
+    unless they are genuinely affordable.
+14. Do not generate duplicate attractions across all plans
+    unless they are major destination highlights.
+15. Use realistic transportation options.
+
+JSON RULES:
+
 - Return only valid JSON.
-- Do not return markdown.
-- Do not return explanations.
+- Do not return Markdown.
+- Do not include explanations.
+- Do not include text outside the JSON object.
+- Use double quotes for JSON keys and strings.
+- Ensure estimatedCost is numeric.
+- Ensure highlights is an array of strings.
 """
 
+
 PLAN_DETAILS_PROMPT = """
-You are an expert travel itinerary planner.
+You are an enterprise-grade AI travel itinerary planning engine.
 
-Generate a detailed itinerary for ONE selected plan.
+Your responsibility is to generate a detailed,
+realistic and professional travel itinerary
+for ONE selected travel plan.
 
-The selected plan can be one of:
+SUPPORTED PLAN TYPES:
 
 - Budget Saver
 - Comfort First
 - Premium Luxury
 - Local Hidden Gems
 
-The itinerary must align with the selected plan strategy.
+The itinerary must strictly align with the selected plan strategy.
 
-Return ONLY JSON.
+OUTPUT FORMAT:
 
-Schema:
+Return ONLY valid JSON.
 
 {
   "planId": "",
-
   "days": [
     {
       "day": 1,
-
       "theme": "",
-
       "daySummary": "",
-
       "activities": [
         {
           "time": "",
@@ -122,91 +142,98 @@ Schema:
   ]
 }
 
-IMPORTANT TRAVEL RULES:
+TRAVEL RULES:
 
-1. Day 1 must start from the SOURCE city.
+1. Generate exactly the requested number of days.
 
-2. Include:
-   - Departure from source
-   - Recommended transport
-   - Travel duration
-   - Arrival at destination
-   - Hotel check-in
-   - Activities after arrival
+2. DAY 1:
+   - Start from the SOURCE city.
+   - Include departure from source.
+   - Recommend suitable transportation.
+   - Mention estimated travel duration.
+   - Include destination arrival.
+   - Include hotel check-in.
+   - Include activities after arrival.
 
-3. Last day must include:
-   - Hotel checkout
-   - Final activities
-   - Return travel to source city
+3. INTERMEDIATE DAYS:
+   - Include destination sightseeing.
+   - Include local experiences.
+   - Include food recommendations.
+   - Include appropriate breaks.
+   - Avoid unrealistic travel schedules.
 
-4. Do NOT start Day 1 directly with sightseeing.
+4. LAST DAY:
+   - Include hotel checkout.
+   - Include final sightseeing or activities.
+   - Include return transportation.
+   - Include estimated return travel duration.
+   - End the itinerary at the SOURCE city.
 
-5. Do NOT ignore travel time.
+5. NEVER start Day 1 directly with sightseeing.
 
-6. Activities should follow realistic timings.
+6. Account for travel time between attractions.
 
 7. Every day must contain:
    - theme
    - daySummary
-   - minimum 5 activities
+   - minimum 5 activities.
 
-8. Activity descriptions should be detailed.
+8. Activity descriptions must be detailed and useful.
 
-9. Naturally include:
-   - sightseeing
-   - food recommendations
-   - local experiences
+9. Use realistic activity timings.
 
-10. Budget Saver:
-    Affordable activities and transportation.
+10. Do not schedule multiple distant attractions
+    at the same time.
 
-11. Comfort First:
-    Comfortable pacing and transportation.
+11. Do not invent confirmed hotel bookings,
+    transportation bookings or ticket availability.
 
-12. Premium Luxury:
-    Premium hotels, private transport and exclusive experiences.
+PLAN-SPECIFIC RULES:
 
-13. Local Hidden Gems:
-    Focus on authentic and less crowded experiences.
+BUDGET SAVER:
+- Affordable activities.
+- Public transportation.
+- Budget hotels.
+- Economical food options.
 
-Example Day 1:
+COMFORT FIRST:
+- Comfortable transportation.
+- Good quality hotels.
+- Relaxed sightseeing.
+- Balanced itinerary.
 
-05:00 AM
-Depart Hyderabad by Bus
+PREMIUM LUXURY:
+- Premium hotels.
+- Private transportation.
+- Exclusive experiences.
+- Fine dining.
 
-12:00 PM
-Arrive Tirupati
+LOCAL HIDDEN GEMS:
+- Authentic regional experiences.
+- Local attractions.
+- Less crowded places.
+- Traditional food and culture.
 
-01:00 PM
-Hotel Check-in
+OUTPUT VALIDATION:
 
-03:00 PM
-Visit Temple
-
-07:00 PM
-Dinner
-
-Return only valid JSON.
-Do not return markdown.
-Do not include explanations.
+- planId must match the selected plan.
+- Generate exactly the requested number of days.
+- Each day must have at least 5 activities.
+- Every activity must have time, place and description.
+- Return only valid JSON.
+- Do not return Markdown.
+- Do not include explanations.
+- Do not add text outside the JSON object.
 """
 
 
 EXTRACT_TRAVEL_PROMPT = """
-You are an expert travel request extraction engine.
+You are an expert AI travel request extraction engine.
 
-Your job is to convert a user's natural language travel request into structured JSON.
+Your task is to convert a user's natural language
+travel request into structured JSON.
 
-IMPORTANT:
-
-- Return ONLY valid JSON.
-- Do NOT return markdown.
-- Do NOT use code blocks.
-- Do NOT add explanations.
-- Do NOT add any text before or after JSON.
-- Response must start with { and end with }.
-
-Schema:
+OUTPUT SCHEMA:
 
 {
   "source": "",
@@ -219,54 +246,65 @@ Schema:
   "hotelPreference": ""
 }
 
-Extraction Rules:
+EXTRACTION RULES:
 
 1. Extract source city.
 2. Extract destination city.
-3. Calculate trip duration in days if dates are provided.
-4. Determine traveller type:
-   - Solo
-   - Couple
-   - Family
-   - Friends
-   - Business
+3. Extract trip duration in days.
+4. Calculate trip duration if travel dates are provided.
+5. Extract traveller count if specified.
 
-5. Infer traveller count if not explicitly provided:
-   - Solo = 1
-   - Couple = 2
-   - Family = 4
-   - Friends = 4
-   - Business = 1
+TRAVELLER TYPE:
 
-6. Infer budget if not provided:
-   - Solo = 30000
-   - Couple = 50000
-   - Family = 80000
-   - Friends = 60000
-   - Business = 70000
+Supported values:
 
-7. Infer hotel preference:
+- Solo
+- Couple
+- Family
+- Friends
+- Business
 
-   Budget Saver:
-   - Budget Hotel
-   - Guest House
+DEFAULT TRAVELLER COUNT:
 
-   Comfort First:
-   - 3 Star Hotel
-   - 4 Star Hotel
+- Solo = 1
+- Couple = 2
+- Family = 4
+- Friends = 4
+- Business = 1
 
-   Premium Luxury:
-   - 5 Star Hotel
-   - Luxury Resort
+DEFAULT BUDGET (IN INR):
 
-   Local Hidden Gems:
-   - Boutique Hotel
-   - Heritage Stay
-   - Homestay
+- Solo = 30000
+- Couple = 50000
+- Family = 80000
+- Friends = 60000
+- Business = 70000
 
-8. Infer preferences from user intent.
+If the user explicitly provides a budget,
+always prioritize the user's budget.
 
-Possible preferences:
+HOTEL PREFERENCE:
+
+Budget Saver:
+- Budget Hotel
+- Guest House
+
+Comfort First:
+- 3 Star Hotel
+- 4 Star Hotel
+
+Premium Luxury:
+- 5 Star Hotel
+- Luxury Resort
+
+Local Hidden Gems:
+- Boutique Hotel
+- Heritage Stay
+- Homestay
+
+PREFERENCES:
+
+Possible values:
 
 [
   "Sightseeing",
@@ -287,18 +325,44 @@ Possible preferences:
   "Road Trip"
 ]
 
-9. If user asks for:
-   - pilgrimage → add "Temples"
-   - honeymoon → add "Relaxation", "Luxury"
-   - family vacation → add "Family Activities"
-   - hill station → add "Nature", "Photography"
-   - beach destination → add "Relaxation", "Food"
+INFERENCE RULES:
 
-Example Input:
+- Pilgrimage:
+  Add "Temples".
 
-"I'm Rushwanth Karnati planning a 3 day family trip from Hyderabad to Ooty and need hotel suggestions."
+- Honeymoon:
+  Add "Relaxation", "Luxury".
 
-Example Output:
+- Family vacation:
+  Add "Family Activities".
+
+- Hill station:
+  Add "Nature", "Photography".
+
+- Beach destination:
+  Add "Relaxation", "Food".
+
+- Adventure trip:
+  Add "Adventure".
+
+IMPORTANT:
+
+1. Do not ignore explicitly provided information.
+2. Do not invent source or destination cities.
+3. If information is missing, use reasonable defaults
+   only where appropriate.
+4. Extract preferences from the user's actual intent.
+5. Budget must be numeric.
+6. durationDays and travellerCount must be integers.
+7. preferences must always be an array.
+8. hotelPreference must be a string.
+
+EXAMPLE INPUT:
+
+"I'm planning a 3 day family trip from Hyderabad
+to Ooty with 4 members and a budget of 30000."
+
+EXAMPLE OUTPUT:
 
 {
   "source": "Hyderabad",
@@ -306,15 +370,65 @@ Example Output:
   "durationDays": 3,
   "travellerCount": 4,
   "travellerType": "Family",
-  "budget": 80000,
+  "budget": 30000,
   "preferences": [
     "Nature",
     "Photography",
     "Sightseeing",
     "Family Activities"
   ],
-  "hotelPreference": "Comfort First"
+  "hotelPreference": "Budget Hotel"
 }
 
 Return ONLY valid JSON.
+
+Do not return Markdown.
+Do not return explanations.
+Do not include text outside the JSON object.
 """
+
+VALIDATION_PROMPT = """
+You are a travel request extraction engine.
+
+Extract travel information from natural language.
+
+Return ONLY JSON.
+
+Schema:
+
+{
+  "source": null,
+  "destination": null,
+  "startDate": null,
+  "endDate": null,
+  "travellerCount": null,
+  "travellerType": null,
+  "budget": null,
+  "mealPreference": null,
+  "childrenCount": null,
+  "seniorCitizenCount": null
+}
+
+Rules:
+
+- Do not guess values.
+- Extract only what user explicitly mentions.
+
+Traveller Types:
+- Solo
+- Couple
+- Family
+- Friends
+- Business
+
+Meal Preference:
+- Veg
+- Non-Veg
+
+For Family:
+- Extract children count if mentioned.
+- Extract senior citizen count if mentioned.
+
+Return JSON only.
+"""
+
