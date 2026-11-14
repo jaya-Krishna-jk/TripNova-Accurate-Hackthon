@@ -1,7 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TravelApiService } from '../../core/services/travel-api.service';
+import { TripStateService } from '../../core/services/trip-state.service';
+import { TravelRequest } from '../../core/models/travel.models';
 
 interface ContextAnchor {
   origin: string;
@@ -19,11 +22,6 @@ interface QuickPrompt {
 
 type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 
-/**
- * Main screen: the AI trip prompt from the Stitch design.
- * "Generate My Trip" posts the free-text prompt to `POST /travel/chat` via TravelApiService.
- * The API response is not rendered yet.
- */
 @Component({
   selector: 'app-plan-trip-page',
   imports: [FormsModule],
@@ -31,6 +29,8 @@ type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
 })
 export class PlanTripPage {
   private readonly travelApi = inject(TravelApiService);
+  private readonly tripState = inject(TripStateService);
+  private readonly router = inject(Router);
 
   protected readonly quickPrompts: QuickPrompt[] = [
     {
@@ -93,13 +93,37 @@ export class PlanTripPage {
     this.errorMessage.set('');
 
     try {
-      // Response handling is intentionally out of scope for this screen.
-      await firstValueFrom(this.travelApi.chat(message));
+      const validation = await firstValueFrom(this.travelApi.validate(message));
+
+      if (!validation.isValid) {
+        this.tripState.validationResult.set(validation);
+        this.tripState.originalPrompt.set(message);
+        this.status.set('idle');
+        this.router.navigate(['/trip-details']);
+        return;
+      }
+
+      const data = validation.extractedData;
+      const request: TravelRequest = {
+        source: data.source ?? '',
+        destination: data.destination ?? '',
+        startDate: data.startDate ?? '',
+        endDate: data.endDate ?? '',
+        travellerCount: data.travellerCount ?? 1,
+        travellerType: data.travellerType ?? 'Solo',
+        budget: data.budget ?? 30000,
+        mealPreference: data.mealPreference ?? 'Veg',
+        childrenCount: data.childrenCount ?? 0,
+        seniorCitizenCount: data.seniorCitizenCount ?? 0,
+        preferences: [],
+        hotelPreference: '3 Star Hotel',
+      };
+
+      await firstValueFrom(this.travelApi.chat(request));
       this.status.set('success');
     } catch (error) {
       this.errorMessage.set(this.travelApi.getErrorMessage(error));
       this.status.set('error');
     }
   }
-
 }

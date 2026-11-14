@@ -11,6 +11,11 @@ export const routes: Routes = [
         title: 'TripNova | Plan a Trip',
         loadComponent: () => import('./features/plan-trip/plan-trip-page').then((m) => m.PlanTripPage),
       },
+      {
+        path: 'trip-details',
+        title: 'TripNova | Complete Trip Details',
+        loadComponent: () => import('./features/trip-details/trip-details-page').then((m) => m.TripDetailsPage),
+      },
     ],
   },
   {
