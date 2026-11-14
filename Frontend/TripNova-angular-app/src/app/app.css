@@ -1,0 +1,394 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.login-page {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  min-height: 100dvh;
+  color: #17231f;
+  background: #f7f8f5;
+}
+
+.home-page {
+  min-height: 100dvh;
+  background: #f7f8f5;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem clamp(1.5rem, 7vw, 7rem);
+  border-bottom: 1px solid #e1e6e2;
+}
+
+.home-content {
+  max-width: 760px;
+  padding: clamp(5rem, 12vh, 9rem) clamp(1.5rem, 12vw, 12rem);
+}
+
+.home-content h1 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.home-content h1 em {
+  color: #b38a32;
+  font-style: italic;
+}
+
+.home-copy {
+  margin: 2rem 0 3rem;
+  color: #71807a;
+  font-size: 1.05rem;
+}
+
+.trip-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 420px;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid #d5ddd8;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.trip-card > :last-child {
+  margin-left: auto;
+  color: #b38a32;
+  font-size: 1.4rem;
+}
+
+.trip-card__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf2ed;
+  color: #356d5f;
+}
+
+.trip-card p {
+  margin: 0.3rem 0 0;
+  color: #71807a;
+  font-size: 0.85rem;
+}
+
+.brand-panel {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(3rem, 8vw, 7rem);
+  color: #f5f2e8;
+  background: #183c35;
+}
+
+.brand-panel::after {
+  position: absolute;
+  right: -15%;
+  bottom: -30%;
+  width: 80%;
+  height: 70%;
+  border: 1px solid rgba(241, 197, 104, 0.2);
+  border-radius: 50%;
+  content: '';
+  transform: rotate(-18deg);
+}
+
+.brand-mark {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  margin-bottom: clamp(4rem, 12vh, 9rem);
+  border: 2px solid #e8bc5c;
+  border-radius: 50%;
+}
+
+.brand-mark__ring {
+  position: absolute;
+  inset: 7px;
+  border: 1px solid #e8bc5c;
+  border-radius: 50%;
+}
+
+.brand-mark__dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e8bc5c;
+}
+
+.eyebrow {
+  margin: 0 0 1.25rem;
+  color: #e8bc5c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.brand-panel h1 {
+  max-width: 580px;
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(3rem, 5vw, 5.3rem);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.brand-panel h1 em {
+  color: #e8bc5c;
+  font-style: italic;
+}
+
+.brand-copy {
+  max-width: 370px;
+  margin: 2rem 0 0;
+  color: rgba(245, 242, 232, 0.7);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.route-line {
+  display: flex;
+  align-items: center;
+  width: min(250px, 80%);
+  margin-top: 4rem;
+}
+
+.route-line__pin {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 2px solid #e8bc5c;
+  border-radius: 50%;
+  color: #e8bc5c;
+  font-size: 0.8rem;
+}
+
+.route-line__pin--end {
+  width: 11px;
+  height: 11px;
+  background: #e8bc5c;
+}
+
+.route-line__path {
+  flex: 1;
+  height: 1px;
+  margin: 0 0.65rem;
+  background: repeating-linear-gradient(90deg, #e8bc5c 0 5px, transparent 5px 10px);
+}
+
+.form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 560px;
+  width: 100%;
+  padding: 3rem clamp(2rem, 7vw, 7rem);
+  box-sizing: border-box;
+}
+
+.login-card h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow--dark {
+  color: #356d5f;
+}
+
+.form-intro {
+  margin: 0.75rem 0 2.3rem;
+  color: #71807a;
+}
+
+form label,
+.password-label label {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: #34443e;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  margin-bottom: 1.4rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid #d5ddd8;
+  border-radius: 7px;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+  color: #17231f;
+  font: inherit;
+}
+
+input:focus {
+  border-color: #356d5f;
+  box-shadow: 0 0 0 3px rgba(53, 109, 95, 0.12);
+}
+
+.password-label {
+  display: flex;
+  justify-content: space-between;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #356d5f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.text-button--strong {
+  font-weight: 700;
+}
+
+.submit-button,
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 50px;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.submit-button {
+  justify-content: space-between;
+  padding: 0 1.2rem;
+  border: 0;
+  background: #e8bc5c;
+  color: #17231f;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #dcae4c;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.8rem 0 1.2rem;
+  color: #9aa59f;
+  font-size: 0.75rem;
+}
+
+.divider::before,
+.divider::after {
+  flex: 1;
+  height: 1px;
+  background: #dfe4e0;
+  content: '';
+}
+
+.google-button {
+  gap: 0.7rem;
+  border: 1px solid #d5ddd8;
+  background: #fff;
+  color: #34443e;
+}
+
+.google-button:hover {
+  background: #f3f6f3;
+}
+
+.google-icon {
+  color: #4285f4;
+  font-family: Arial, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.switch-mode,
+.legal-copy {
+  text-align: center;
+}
+
+.switch-mode {
+  margin: 1.8rem 0 0;
+  color: #71807a;
+  font-size: 0.85rem;
+}
+
+.form-message {
+  margin: -0.6rem 0 1rem;
+  font-size: 0.8rem;
+}
+
+.form-message--error {
+  color: #b2473f;
+}
+
+.form-message--success {
+  color: #356d5f;
+}
+
+.legal-copy {
+  margin: 2rem 0 0;
+  color: #9aa59f;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.mobile-brand {
+  display: none;
+  margin-bottom: 3rem;
+  color: #183c35;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.mobile-brand span {
+  color: #b38a32;
+}
+
+@media (max-width: 800px) {
+  .login-page {
+    display: block;
+  }
+
+  .brand-panel {
+    display: none;
+  }
+
+  .form-panel {
+    max-width: none;
+    min-height: 100dvh;
+    padding: 2rem 1.5rem;
+  }
+
+  .mobile-brand {
+    display: block;
+  }
+}
