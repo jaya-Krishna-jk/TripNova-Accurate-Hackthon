@@ -1,0 +1,184 @@
+<div class="flex w-full max-w-7xl mx-auto flex-col space-y-8 pb-16">
+
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-2 text-label-md text-on-surface-variant">
+    <a routerLink="/" class="transition-colors hover:text-primary">Home</a>
+    <span class="material-symbols-outlined text-[16px] text-outline">chevron_right</span>
+    <a routerLink="/" class="transition-colors hover:text-primary">Plan Trip</a>
+    <span class="material-symbols-outlined text-[16px] text-outline">chevron_right</span>
+    <span class="font-semibold text-primary">Itinerary Suggestions</span>
+  </nav>
+
+  <!-- Trip Summary Banner -->
+  <div class="w-full rounded-xl bg-primary-container p-5 shadow-md">
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+      <div class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">near_me</span>
+        <span class="font-semibold tracking-wide text-white">{{ tripDetails.source }} → {{ tripDetails.destination }}</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm text-surface-container-low">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">calendar_month</span>
+        <span>{{ formatDate(tripDetails.startDate) | date:'MMM d' }} – {{ formatDate(tripDetails.endDate) | date:'MMM d, y' }} ({{ tripDetails.durationDays }}D / {{ tripDetails.durationDays - 1 }}N)</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm text-surface-container-low">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">group</span>
+        <span>{{ tripDetails.travellerCount }} Travellers · {{ tripDetails.travellerType }}</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm font-medium text-white">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">account_balance_wallet</span>
+        <span>Budget Cap: ₹{{ tripDetails.budget | number:'1.0-0' }}</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm text-surface-container-low">
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">eco</span>
+        <span>{{ tripDetails.mealPreference }} Meals</span>
+        <span class="opacity-40">·</span>
+        <span class="material-symbols-outlined text-[18px] text-secondary-container" aria-hidden="true">hotel</span>
+        <span>{{ tripDetails.hotelPreference }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Title -->
+  <div class="flex flex-col gap-2">
+    <h1 class="font-headline text-headline-lg tracking-tight text-primary">Your AI-Curated Travel Plans</h1>
+    <p class="max-w-3xl text-body-lg text-on-surface-variant">
+      We've crafted {{ plans.length }} personalized itineraries based on your preferences. Compare and choose the one that speaks to you.
+    </p>
+  </div>
+
+  @if (errorMessage()) {
+    <div role="alert" class="flex items-start gap-2.5 rounded-lg border border-error/30 bg-error-container p-4 text-body-md text-on-error-container">
+      <span class="material-symbols-outlined text-[20px]" aria-hidden="true">error</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  }
+
+  <!-- Plan Cards Grid -->
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    @for (plan of plans; track plan.planId) {
+      <div
+        class="flex flex-col justify-between rounded-lg bg-surface-container-lowest p-6 shadow-sm transition-all hover:shadow-md"
+        [class.border-2]="isRecommended(plan)"
+        [class.border-[#C9A227]]="isRecommended(plan)"
+        [class.shadow-md]="isRecommended(plan)"
+        [class.border]="!isRecommended(plan)"
+        [class.border-outline-variant]="!isRecommended(plan)"
+      >
+        <div class="space-y-4">
+          <!-- Badge Row -->
+          <div class="flex items-center justify-between">
+            <span
+              class="rounded-full px-2.5 py-1 text-label-sm uppercase tracking-wider"
+              [ngClass]="[getBadge(plan.planType).bg, getBadge(plan.planType).text]"
+            >{{ plan.planType }}</span>
+            @if (isRecommended(plan)) {
+              <span class="flex items-center gap-1 rounded-full bg-secondary-container px-2.5 py-0.5 text-label-sm font-bold tracking-wide text-on-secondary-container shadow-sm">
+                ★ RECOMMENDED
+              </span>
+            } @else {
+              <span class="text-body-sm font-medium text-on-surface-variant">Plan #{{ plan.planId }}</span>
+            }
+          </div>
+
+          <!-- Title & Description -->
+          <div>
+            <h2 class="font-headline text-headline-sm font-bold leading-snug text-primary">{{ plan.planName }}</h2>
+            <p class="mt-1.5 text-body-sm leading-relaxed text-on-surface-variant">{{ plan.summary.description }}</p>
+          </div>
+
+          <!-- Price -->
+          <div class="flex items-center gap-2.5 py-2">
+            <span class="text-2xl font-bold text-[#7F6410]">₹{{ plan.summary.estimatedCost | number:'1.0-0' }}</span>
+            @if (isLowestPrice(plan)) {
+              <span class="rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2 py-0.5 text-label-sm font-semibold text-[#059669]">
+                Lowest Price
+              </span>
+            }
+            <span class="text-body-sm text-on-surface-variant">total for {{ tripDetails.travellerCount }}</span>
+          </div>
+
+          <!-- Key Details -->
+          <div class="space-y-2 border-t border-surface-container pt-2 text-body-sm text-on-surface">
+            <div class="flex items-start gap-2.5">
+              <span class="material-symbols-outlined mt-0.5 shrink-0 text-[16px] text-primary" aria-hidden="true">{{ getTransportIcon(plan.summary.transportMode) }}</span>
+              <span><strong class="text-primary">Transport:</strong> {{ plan.summary.transportMode }}</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <span class="material-symbols-outlined mt-0.5 shrink-0 text-[16px] text-primary" aria-hidden="true">hotel</span>
+              <span><strong class="text-primary">Hotel:</strong> {{ plan.summary.hotelCategory }}</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <span class="material-symbols-outlined mt-0.5 shrink-0 text-[16px] text-primary" aria-hidden="true">sentiment_satisfied</span>
+              <span><strong class="text-primary">Best For:</strong> {{ plan.summary.bestFor }}</span>
+            </div>
+          </div>
+
+          <!-- Highlights -->
+          <div class="space-y-2 border-t border-surface-container pt-2">
+            <span class="block text-label-sm uppercase tracking-wider text-primary">Highlights</span>
+            <ul class="space-y-2 text-body-sm text-on-surface-variant">
+              @for (highlight of plan.highlights; track $index) {
+                <li class="flex items-start gap-2">
+                  <span
+                    class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                    [class.bg-[#FEF9C3]]="isRecommended(plan)"
+                    [class.bg-surface-container]="!isRecommended(plan)"
+                  >
+                    <span
+                      class="material-symbols-outlined text-[12px]"
+                      [class.text-[#7F6410]]="isRecommended(plan)"
+                      [class.text-primary]="!isRecommended(plan)"
+                      aria-hidden="true"
+                    >check</span>
+                  </span>
+                  <span>{{ highlight }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="mt-4 pt-6">
+          <button
+            type="button"
+            (click)="selectPlan(plan)"
+            [disabled]="loadingPlanId() !== null"
+            class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-container py-2.5 px-4 text-label-md font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+            [class.border-2]="isRecommended(plan)"
+            [class.border-[#C9A227]]="isRecommended(plan)"
+          >
+            @if (loadingPlanId() === plan.planId) {
+              <span class="material-symbols-outlined animate-spin text-[16px]" aria-hidden="true">progress_activity</span>
+              <span>Crafting your day-wise itinerary…</span>
+            } @else {
+              <span>Select This Plan</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+            }
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="flex flex-col items-center justify-center gap-3 pt-6 pb-12 text-center">
+    <div class="flex flex-wrap items-center justify-center gap-4">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-5 py-2.5 text-label-md font-semibold text-primary shadow-sm transition-all hover:bg-surface-container"
+      >
+        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">compare_arrows</span>
+        <span>Compare All Plans</span>
+      </button>
+      <a
+        routerLink="/"
+        class="inline-flex items-center gap-1.5 px-3 py-2 text-body-md font-medium text-on-surface-variant transition-colors hover:text-primary"
+      >
+        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_back</span>
+        <span>Back to Chat</span>
+      </a>
+    </div>
+    <p class="text-body-sm italic text-on-surface-variant">All prices are estimated. Final pricing will be confirmed after booking.</p>
+  </div>
+</div>

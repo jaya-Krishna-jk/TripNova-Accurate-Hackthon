@@ -1,0 +1,149 @@
+<main class="travel-mock-page">
+  <section class="travel-mock-shell">
+    <header class="travel-header">
+      <div>
+        <p class="eyebrow">Trip simulator</p>
+        <h1>Mock trip</h1>
+      </div>
+    </header>
+
+    <div class="trip-id-box">
+      <label for="trip-id">Trip ID</label>
+      <input id="trip-id" [(ngModel)]="tripId" type="text" placeholder="Enter trip ID" />
+      <button type="button" class="primary-button" [disabled]="loading() || actionPending()" (click)="loadTrip()">Load trip</button>
+    </div>
+
+    @if (loading()) {
+      <section class="empty-state" role="status">Loading trip from Firebase...</section>
+    } @else if (error() && !trip()) {
+      <section class="empty-state error-state" role="alert">
+        <p>{{ error() }}</p>
+        <button type="button" class="secondary-button" (click)="loadTrip()">Try again</button>
+      </section>
+    } @else if (notFound()) {
+      <section class="empty-state" role="status">No trip found with that ID.</section>
+    } @else if (trip(); as loadedTrip) {
+      <section class="simulator-card">
+        @let checkpoint = getCurrentCheckpoint();
+        <div class="simulator-topbar">
+          <span class="status-pill" [class.problem]="tripStatus() === 'invalid'">{{ tripStatus() === 'not_started' ? 'Not Started' : tripStatus() === 'completed' ? 'Completed' : 'In Progress' }}</span>
+          @if (isDelayTriggered()) {
+            <span class="status-pill delayed">Delay trigger active</span>
+          }
+          <strong>{{ getTripTitle() }}</strong>
+        </div>
+
+        <div class="progress-heading">
+          <h2>Journey progress</h2>
+          <span>Day {{ checkpoint.dayNumber }} · Day checkpoint {{ checkpoint.checkpointNumber }} · Overall {{ checkpoint.overallCheckpointIndex + 1 }} of {{ getCheckpointCount() }}</span>
+        </div>
+        <div class="progress-track" role="progressbar" [attr.aria-valuenow]="getProgressPercent()" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-fill" [style.width.%]="getProgressPercent()"></div>
+        </div>
+
+        <div class="info-grid">
+          <div>
+            <span class="label">Current checkpoint</span>
+            <strong>{{ checkpoint.location }}</strong>
+          </div>
+          <div>
+            <span class="label">Expected time</span>
+            <strong>{{ checkpoint.expectedTime }}</strong>
+          </div>
+          <div>
+            <span class="label">Total drift</span>
+            <strong>{{ getDriftHours() }} hrs</strong>
+          </div>
+          <div>
+            <span class="label">This checkpoint delay</span>
+            <strong>{{ checkpoint.delayHrs }} hrs</strong>
+          </div>
+          <div>
+            <span class="label">Visited</span>
+            <strong>{{ checkpoint.visitStatus === 'visited' ? 'Yes' : 'Not yet' }}</strong>
+          </div>
+          <div>
+            <span class="label">On time</span>
+            <strong>{{ checkpoint.onTime === null ? 'Not recorded' : checkpoint.onTime ? 'Yes' : 'No' }}</strong>
+          </div>
+          <div>
+            <span class="label">On track</span>
+            <strong>{{ checkpoint.onTrack === null ? 'Not recorded' : checkpoint.onTrack ? 'Yes' : 'No' }}</strong>
+          </div>
+          <div>
+            <span class="label">Current ongoing date</span>
+            <strong>{{ getCurrentOngoingDate() ? (getCurrentOngoingDate() | date:'medium') : 'Not recorded' }}</strong>
+          </div>
+        </div>
+
+        @if (isDelayTriggered()) {
+          <p class="delay-trigger-notice" role="status">Cumulative drift is {{ getDriftHours() }} hours. The 5-hour delay trigger is active.</p>
+        }
+
+        <div class="current-action-box">
+          <span class="label">What is happening</span>
+          <p>{{ checkpoint.currentAction }}</p>
+        </div>
+
+        <div class="next-step-box">
+          <span class="label">Next action</span>
+          <p>{{ checkpoint.nextAction }}</p>
+        </div>
+
+        @if (refreshRequired()) {
+          <button type="button" class="primary-button start-button" [disabled]="loading()" (click)="loadTrip()">Reload trip before continuing</button>
+        } @else if (tripStatus() === 'not_started') {
+          <button type="button" class="primary-button start-button" [disabled]="actionPending()" (click)="startTrip()">{{ actionPending() ? 'Starting...' : 'Start trip' }}</button>
+        } @else if (tripStatus() === 'completed') {
+          <p class="completion-state">This trip is complete and cannot be restarted.</p>
+        } @else if (tripStatus() === 'in_progress') {
+          @if (loadedTrip.tracking?.lastEvent?.type === 'missed') {
+            <button type="button" class="primary-button start-button" [disabled]="actionPending()" (click)="recoverMissedCheckpoint()">{{ actionPending() ? 'Saving...' : checkpoint.nextAction }}</button>
+          } @else if (loadedTrip.tracking?.lastEvent?.type === 'dropped') {
+            <button type="button" class="primary-button start-button" [disabled]="actionPending()" (click)="skipDroppedConnection()">{{ actionPending() ? 'Saving...' : 'Skip connection and continue' }}</button>
+          } @else {
+            <div class="decision-box">
+              <label for="delay-hours">Delay (hours)</label>
+              <input id="delay-hours" type="number" min="0" step="0.25" [(ngModel)]="delayHours" />
+            </div>
+
+            <div class="decision-actions">
+              <button type="button" class="success" [disabled]="actionPending()" (click)="recordDecision('caught')">On time</button>
+              <button type="button" class="warning" [disabled]="actionPending()" (click)="recordDecision('delayed')">Delay</button>
+              <button type="button" class="danger" [disabled]="actionPending()" (click)="recordDecision('missed')">Missed</button>
+              <button type="button" class="muted" [disabled]="actionPending()" (click)="recordDecision('dropped')">Drop connection</button>
+            </div>
+          }
+        } @else {
+          <p class="error-state">Trip tracking data is invalid. No actions are available.</p>
+        }
+
+        @if (getCheckpointStates().length > 0) {
+          <details class="checkpoint-history">
+            <summary>Checkpoint tracking ({{ getCheckpointStates().length }})</summary>
+            @for (state of getCheckpointStates(); track state.overallCheckpointIndex) {
+              <div class="checkpoint-history-row">
+                <strong>Day {{ state.dayNumber }}, checkpoint {{ state.checkpointNumber }} (day index {{ state.dayCheckpointIndex }}, overall {{ state.overallCheckpointIndex + 1 }}): {{ state.checkpointName }}</strong>
+                <span>{{ state.status === 'visited' ? 'Visited' : 'Not visited' }}</span>
+                <span>Delay {{ state.delayHrs }} hrs</span>
+                <span>On time: {{ state.onTime == null ? 'Unknown' : state.onTime ? 'Yes' : 'No' }}</span>
+                <span>On track: {{ state.onTrack == null ? 'Unknown' : state.onTrack ? 'Yes' : 'No' }}</span>
+                <span>Outcome: {{ state.outcome ?? 'Not recorded' }}</span>
+              </div>
+            }
+            @if ((loadedTrip.tracking?.unattributedDriftHrs ?? 0) > 0) {
+              <p class="legacy-drift-note">{{ loadedTrip.tracking?.unattributedDriftHrs }} hours of earlier drift have no saved checkpoint attribution.</p>
+            }
+          </details>
+        }
+
+        @if (error() && trip()) { <p class="error-state" role="alert">{{ error() }}</p> }
+        <p class="decision-summary">{{ decision() }}</p>
+      </section>
+    } @else {
+      <section class="empty-state">
+        <p>{{ decision() }}</p>
+      </section>
+    }
+  </section>
+</main>

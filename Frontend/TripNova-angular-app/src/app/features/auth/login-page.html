@@ -1,0 +1,63 @@
+<main class="login-page">
+	<section class="brand-panel" aria-label="TripNova">
+		<div class="brand-mark" aria-hidden="true">
+			<span class="brand-mark__ring"></span>
+			<span class="brand-mark__dot"></span>
+		</div>
+		<p class="eyebrow">TripNova</p>
+		<h1>Find your next <em>great escape.</em></h1>
+		<p class="brand-copy">Sign in to continue planning your journey.</p>
+		<div class="route-line" aria-hidden="true">
+			<span class="route-line__pin">+</span>
+			<span class="route-line__path"></span>
+			<span class="route-line__pin route-line__pin--end"></span>
+		</div>
+	</section>
+
+	<section class="form-panel">
+		<div class="mobile-brand">TRIP<span>NOVA</span></div>
+		<div class="login-card">
+			<p class="eyebrow eyebrow--dark">Your journey starts here</p>
+			<h2>{{ isSignUp() ? 'Create your account' : 'Welcome back' }}</h2>
+			<p class="form-intro">{{ isSignUp() ? 'Set up your TripNova profile.' : 'Sign in to continue to TripNova.' }}</p>
+
+			@if (currentUser(); as user) {
+				<p class="form-message form-message--success">Signed in as {{ user.name }} ({{ user.username }}).</p>
+				<button type="button" class="submit-button" (click)="logout()">Sign out</button>
+			} @else {
+				<form (ngSubmit)="submit()">
+					@if (isSignUp()) {
+						<label for="name">Name</label>
+						<input id="name" name="name" type="text" autocomplete="name" [(ngModel)]="name" required />
+					}
+
+					<label for="username">Username</label>
+					<input id="username" name="username" type="text" autocomplete="username" [(ngModel)]="username" required />
+
+					<label for="password">Password</label>
+					<input id="password" name="password" type="password" [autocomplete]="isSignUp() ? 'new-password' : 'current-password'" [(ngModel)]="password" required />
+
+					@if (errorMessage()) {
+						<p class="form-message form-message--error" role="alert">{{ errorMessage() }}</p>
+					}
+					@if (successMessage()) {
+						<p class="form-message form-message--success" role="status">{{ successMessage() }}</p>
+					}
+
+					<button type="submit" class="submit-button" [disabled]="isLoading()">
+						<span>{{ isLoading() ? 'Please wait...' : isSignUp() ? 'Create account' : 'Sign in' }}</span>
+						<span aria-hidden="true">&#8594;</span>
+					</button>
+				</form>
+
+				<p class="switch-mode">
+					{{ isSignUp() ? 'Already have an account?' : 'New to TripNova?' }}
+					<button type="button" class="text-button text-button--strong" (click)="toggleMode()">
+						{{ isSignUp() ? 'Sign in' : 'Create account' }}
+					</button>
+				</p>
+				<p class="legal-copy">By continuing, you agree to use TripNova responsibly while planning your travels.</p>
+			}
+		</div>
+	</section>
+</main>

@@ -1,0 +1,7 @@
+---
+alwaysApply: false
+---
+// React Native Expo rules — INACTIVE
+// No frontend has been set up yet for this project.
+// When a frontend is added, update this file with the actual framework conventions.
+// The backend API is at smart-travel-backend/ running FastAPI on port 8000.

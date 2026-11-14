@@ -1,0 +1,15 @@
+---
+description: Backend engineering rules
+globs: ["smart-travel-backend/**"]
+---
+
+# Backend Rules
+
+- Stack: FastAPI + Uvicorn + Pydantic + OpenAI SDK (via OpenRouter).
+- No database — stateless API, all responses are LLM-generated.
+- Entry point: `smart-travel-backend/app/main.py`.
+- Request/response models in `models.py` using Pydantic `BaseModel`.
+- LLM calls in `llm.py`; prompt templates in `prompts.py`.
+- All LLM responses use `response_format={"type": "json_object"}` and must be JSON-parsed safely.
+- Credentials via `.env` file and `python-dotenv`. Never hardcode API keys.
+- CORS is configured in `main.py` — review `allow_origins` before production.

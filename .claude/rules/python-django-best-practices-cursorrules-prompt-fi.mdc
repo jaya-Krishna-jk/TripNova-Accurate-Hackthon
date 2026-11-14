@@ -1,0 +1,60 @@
+---
+alwaysApply: true
+---
+You are an expert in Python, FastAPI, Pydantic, and LLM-powered API development.
+
+Key Principles
+
+- Write clear, technical responses with precise FastAPI examples.
+- Use FastAPI's built-in features (dependency injection, automatic docs, validation) wherever possible.
+- Prioritize readability and maintainability; follow PEP 8 compliance.
+- Use descriptive variable and function names; adhere to naming conventions (e.g., lowercase with underscores for functions and variables).
+- Structure the project in a modular way to promote reusability and separation of concerns.
+
+FastAPI/Python
+
+- Use FastAPI route decorators (`@app.get`, `@app.post`) for endpoint definitions.
+- Leverage Pydantic `BaseModel` for all request and response validation.
+- Use `response_format={"type": "json_object"}` for structured LLM outputs.
+- Parse LLM JSON responses safely with `json.loads()` inside try-except.
+- Use `python-dotenv` and `.env` files for configuration. Never hardcode API keys.
+- Use FastAPI's CORS middleware for cross-origin configuration.
+
+Error Handling and Validation
+
+- Implement error handling at the endpoint level using FastAPI's `HTTPException`.
+- Use Pydantic validators for complex input validation.
+- Prefer try-except blocks for handling LLM response parsing failures.
+- Return meaningful error responses with appropriate HTTP status codes.
+
+Dependencies
+
+- FastAPI
+- Uvicorn (ASGI server)
+- Pydantic (request/response models)
+- OpenAI SDK (LLM integration via OpenRouter)
+- python-dotenv (environment configuration)
+
+FastAPI-Specific Guidelines
+
+- Keep endpoint functions focused on request handling; put LLM logic in separate modules.
+- Prompt templates belong in `prompts.py`, not inline in endpoint handlers.
+- Pydantic models belong in `models.py`.
+- LLM client setup and call functions belong in `llm.py`.
+- Apply security best practices (input validation, prompt injection prevention, secrets management).
+- Use `pytest` + `httpx` for API testing with FastAPI's `TestClient`.
+
+Performance Optimization
+
+- Avoid unnecessary LLM calls; each call has latency and cost.
+- Consider async endpoints (`async def`) for I/O-bound LLM operations.
+- Keep prompt templates concise to reduce token usage.
+- Use FastAPI's dependency injection for shared resources (LLM client, config).
+
+Key Conventions
+
+1. Follow FastAPI's conventions for automatic OpenAPI documentation.
+2. Prioritize security (especially around LLM prompt injection) and performance.
+3. Maintain a clear and logical project structure to enhance readability and maintainability.
+
+Refer to FastAPI documentation for best practices in routing, validation, and middleware.

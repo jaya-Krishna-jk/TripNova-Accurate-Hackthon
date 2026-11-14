@@ -1,0 +1,568 @@
+<div class="flex flex-col w-full pb-16 mx-auto max-w-7xl">
+
+  <!-- Top Navigation & Stage Indicator -->
+  <div class="w-full bg-surface-container-lowest shadow-sm rounded-xl p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Trip Planning</span>
+          <span class="text-outline-variant font-label-sm">/</span>
+          <span class="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">{{ routeLabel }}</span>
+          <span class="text-outline-variant font-label-sm">/</span>
+          <span class="font-label-sm text-label-sm text-tertiary-container font-semibold uppercase tracking-wider">AI Validation</span>
+        </div>
+        <h1 class="font-headline-md text-headline-md text-primary tracking-tight">Complete Missing Trip Details</h1>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">
+          Our AI validation API analyzed your prompt. Please confirm or provide the missing trip parameters below to proceed with itinerary generation.
+        </p>
+      </div>
+
+      <!-- 3-Step Milestone Tracker -->
+      <div class="flex items-center gap-2 self-start md:self-auto bg-surface-container-low px-4 py-2.5 rounded-lg shadow-sm">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-tertiary-container text-on-tertiary flex items-center justify-center">
+            <span class="material-symbols-outlined text-[15px]">check</span>
+          </div>
+          <span class="font-label-sm text-label-sm text-on-surface font-semibold hidden sm:inline">Prompt Analyzed</span>
+        </div>
+        <div class="w-8 h-[2px] bg-tertiary-fixed-dim"></div>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-label-sm text-label-sm font-bold shadow-sm">
+            {{ missingCount }}
+          </div>
+          <span class="font-label-sm text-label-sm text-primary font-bold">Missing Parameters Required</span>
+        </div>
+        <div class="w-8 h-[2px] bg-surface-variant"></div>
+        <div class="flex items-center gap-2 opacity-50">
+          <div class="w-6 h-6 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-label-sm text-label-sm font-medium">3</div>
+          <span class="font-label-sm text-label-sm text-on-surface-variant hidden sm:inline">Itinerary Synthesis</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Layout Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Extraction Summary + Form -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <!-- AI Prompt Validation Diagnostic Banner -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-variant">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">troubleshoot</span>
+              <span class="font-label-md text-label-md text-primary uppercase tracking-wide">AI Prompt Validation Diagnostic</span>
+              <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                <span class="font-label-sm text-label-sm font-bold">{{ missingCount }} Parameters Need Review</span>
+              </div>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Extracted from your travel prompt. Review and confirm highlighted values below.</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 bg-surface-container-low px-3 py-1.5 rounded-lg text-on-surface-variant font-label-sm text-label-sm">
+            <span class="material-symbols-outlined text-[16px] text-tertiary-container">verified</span>
+            <span>{{ detectedCount }} / {{ parameterCards.length }} Parameters Analyzed</span>
+          </div>
+        </div>
+
+        <!-- 6-Card Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-1">
+          @for (card of parameterCards; track card.field; let i = $index) {
+            <div
+              class="p-3.5 rounded-xl flex flex-col justify-between space-y-2"
+              [class]="card.detected
+                ? 'bg-surface-container-low border border-surface-variant/50'
+                : 'bg-error-container/20 border-2 border-error shadow-sm'"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold" [class]="card.detected ? 'text-on-surface-variant' : 'text-error'">{{ i + 1 }}. {{ card.label }}</span>
+                @if (card.detected) {
+                  <span class="font-label-sm text-[11px] text-tertiary-container bg-surface-container-lowest px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-[12px]">check_circle</span> Detected
+                  </span>
+                } @else {
+                  <span class="font-label-sm text-[11px] text-error bg-error-container px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-[12px]">error</span> Missing
+                  </span>
+                }
+              </div>
+              <div>
+                @if (card.detected) {
+                  <span class="font-title-sm text-title-sm font-bold block leading-snug text-primary">{{ card.value }}</span>
+                  <span class="font-body-sm text-[11px] text-on-surface-variant">{{ card.subtitle }}</span>
+                } @else {
+                  <span class="font-title-sm text-title-sm font-bold block leading-snug text-error">— Not provided</span>
+                  <span class="font-body-sm text-[11px] text-error font-medium">{{ card.subtitle }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Calibration Form -->
+      <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm space-y-8">
+        <div class="flex items-center justify-between pb-2 border-b border-surface-variant">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-6 bg-secondary-container rounded-full"></span>
+            <h2 class="font-headline-sm text-headline-sm text-primary">Required Trip Parameter Calibration</h2>
+          </div>
+          <span class="font-label-sm text-label-sm text-tertiary-container bg-surface-container px-3 py-1 rounded-full font-bold">
+            {{ missingCount }} Fields Required
+          </span>
+        </div>
+
+        <!-- FIELD 1: Source & Destination -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('source') || isMissing('destination') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono"
+                [class]="isMissing('source') || isMissing('destination') ? 'bg-error text-on-error font-bold' : 'bg-primary-container text-on-primary'"
+              >1</span>
+              <span>Source & Destination Hubs</span>
+            </label>
+            @if (!isMissing('source') && !isMissing('destination')) {
+              <span class="font-label-sm text-label-sm text-tertiary-container font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">verified</span> Origin & Destination Verified
+              </span>
+            }
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-3.5 rounded-lg space-y-1.5" [class]="isMissing('source') ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+              <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold block" [class]="isMissing('source') ? 'text-error' : 'text-on-surface-variant'">Source / Origin City</span>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-[18px]" [class]="isMissing('source') ? 'text-error' : 'text-on-surface-variant'">flight_takeoff</span>
+                <input
+                  type="text"
+                  [(ngModel)]="source"
+                  name="source"
+                  class="w-full rounded-lg pl-9 pr-3 py-2 font-title-sm text-title-sm font-bold shadow-sm focus:outline-none focus:ring-1"
+                  [class]="isMissing('source') && !source ? 'bg-error-container/10 text-error ring-1 ring-error focus:ring-error' : 'bg-surface-container-lowest text-primary focus:ring-primary'"
+                  placeholder="e.g. Hyderabad"
+                >
+              </div>
+              @if (isMissing('source') && !source) {
+                <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('source') }}
+                </span>
+              }
+            </div>
+            <div class="p-3.5 rounded-lg space-y-1.5" [class]="isMissing('destination') ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+              <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold block" [class]="isMissing('destination') ? 'text-error' : 'text-on-surface-variant'">Destination Corridor</span>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-[18px]" [class]="isMissing('destination') ? 'text-error' : 'text-secondary'">location_on</span>
+                <input
+                  type="text"
+                  [(ngModel)]="destination"
+                  name="destination"
+                  class="w-full rounded-lg pl-9 pr-3 py-2 font-title-sm text-title-sm font-bold shadow-sm focus:outline-none focus:ring-1"
+                  [class]="isMissing('destination') && !destination ? 'bg-error-container/10 text-error ring-1 ring-error focus:ring-error' : 'bg-surface-container-lowest text-primary focus:ring-primary'"
+                  placeholder="e.g. Ooty"
+                >
+              </div>
+              @if (isMissing('destination') && !destination) {
+                <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('destination') }}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- FIELD 2: Travel Dates -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('startDate') || isMissing('endDate') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono font-bold"
+                [class]="isMissing('startDate') || isMissing('endDate')
+                  ? 'bg-error text-on-error'
+                  : 'bg-primary-container text-on-primary'"
+              >2</span>
+              <span>Travel Dates (From Date & To Date)</span>
+            </label>
+            @if (isMissing('startDate') || isMissing('endDate')) {
+              <span class="font-label-sm text-label-sm text-error font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">event_available</span> Exact Calendar Dates Required
+              </span>
+            }
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 rounded-lg space-y-1" [class]="isMissing('startDate') ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+              <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold block" [class]="isMissing('startDate') ? 'text-error' : 'text-on-surface-variant'">From Date</span>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-[18px]" [class]="isMissing('startDate') ? 'text-error' : 'text-primary'">calendar_today</span>
+                <input
+                  type="date"
+                  [(ngModel)]="startDate"
+                  name="startDate"
+                  class="w-full rounded-lg pl-9 pr-2 py-2 font-title-sm text-title-sm font-bold shadow-sm focus:outline-none focus:ring-1"
+                  [class]="isMissing('startDate') && !startDate ? 'bg-error-container/10 text-error ring-1 ring-error focus:ring-error' : 'bg-surface-container-lowest text-primary focus:ring-primary'"
+                >
+              </div>
+              @if (isMissing('startDate') && !startDate) {
+                <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('startDate') }}
+                </span>
+              }
+            </div>
+            <div class="p-3 rounded-lg space-y-1" [class]="isMissing('endDate') ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+              <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold block" [class]="isMissing('endDate') ? 'text-error' : 'text-on-surface-variant'">To Date</span>
+              <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-[18px]" [class]="isMissing('endDate') ? 'text-error' : 'text-primary'">event</span>
+                <input
+                  type="date"
+                  [(ngModel)]="endDate"
+                  name="endDate"
+                  class="w-full rounded-lg pl-9 pr-2 py-2 font-title-sm text-title-sm font-bold shadow-sm focus:outline-none focus:ring-1"
+                  [class]="isMissing('endDate') && !endDate ? 'bg-error-container/10 text-error ring-1 ring-error focus:ring-error' : 'bg-surface-container-lowest text-primary focus:ring-primary'"
+                >
+              </div>
+              @if (isMissing('endDate') && !endDate) {
+                <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('endDate') }}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- FIELD 3: Number of People -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('travellerCount') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono"
+                [class]="isMissing('travellerCount') ? 'bg-error text-on-error font-bold' : 'bg-primary-container text-on-primary'"
+              >3</span>
+              <span>Number of People (Travellers Breakdown)</span>
+            </label>
+            <span class="font-label-sm text-label-sm" [class]="isMissing('travellerCount') && travellerCount === 0 ? 'text-error font-bold' : 'text-on-surface-variant'">
+              @if (isMissing('travellerCount') && travellerCount === 0) {
+                Required
+              } @else {
+                {{ travellerCount }} Total
+              }
+            </span>
+          </div>
+          @if (isMissing('travellerCount') && travellerCount === 0) {
+            <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('travellerCount') }}
+            </span>
+          }
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-lg p-3.5 flex items-center justify-between" [class]="isMissing('travellerCount') && travellerCount === 0 ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+              <div>
+                <span class="font-title-sm text-title-sm text-primary font-bold block">Adult Passengers</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant">Age 18+</span>
+              </div>
+              <div class="flex items-center gap-3 bg-surface-container-lowest px-2 py-1 rounded-lg shadow-sm">
+                <button type="button" (click)="decrementAdults()" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                  <span class="material-symbols-outlined text-[16px]">remove</span>
+                </button>
+                <span class="font-title-md text-title-md text-primary font-bold w-4 text-center">{{ adultCount }}</span>
+                <button type="button" (click)="incrementAdults()" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                </button>
+              </div>
+            </div>
+            <div class="bg-surface-container-low rounded-lg p-3.5 flex items-center justify-between">
+              <div>
+                <span class="font-title-sm text-title-sm text-primary font-bold block">Children Traveling</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant">Age 0 to 17</span>
+              </div>
+              <div class="flex items-center gap-3 bg-surface-container-lowest px-2 py-1 rounded-lg shadow-sm">
+                <button type="button" (click)="decrementChildren()" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                  <span class="material-symbols-outlined text-[16px]">remove</span>
+                </button>
+                <span class="font-title-md text-title-md text-primary font-bold w-4 text-center">{{ childrenCount }}</span>
+                <button type="button" (click)="incrementChildren()" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Senior citizen toggle -->
+          <div class="bg-surface-container-low rounded-lg p-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-on-surface-variant">elderly</span>
+              <span class="font-label-sm text-label-sm text-primary font-bold">Travellers Aged 65+?</span>
+            </div>
+            <div class="flex items-center gap-3 bg-surface-container-lowest px-2 py-1 rounded-lg shadow-sm">
+              <button type="button" (click)="seniorCitizenCount = Math.max(seniorCitizenCount - 1, 0)" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                <span class="material-symbols-outlined text-[16px]">remove</span>
+              </button>
+              <span class="font-title-md text-title-md text-primary font-bold w-4 text-center">{{ seniorCitizenCount }}</span>
+              <button type="button" (click)="seniorCitizenCount = seniorCitizenCount + 1" class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FIELD 4: Budget -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('budget') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono font-bold"
+                [class]="isMissing('budget')
+                  ? 'bg-error text-on-error'
+                  : 'bg-primary-container text-on-primary'"
+              >4</span>
+              <span>Total Budget (Estimated INR)</span>
+            </label>
+          </div>
+          <div class="p-4 rounded-lg" [class]="isMissing('budget') && !budget ? 'bg-error-container/10 border border-error' : 'bg-surface-container-low'">
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-title-md text-title-md font-bold" [class]="isMissing('budget') && !budget ? 'text-error' : 'text-primary'">₹</span>
+              <input
+                type="number"
+                [(ngModel)]="budget"
+                name="budget"
+                class="w-full rounded-lg pl-8 pr-16 py-2 font-headline-sm text-headline-sm font-bold shadow-sm focus:outline-none focus:ring-1"
+                [class]="isMissing('budget') && !budget ? 'bg-error-container/10 text-error ring-1 ring-error focus:ring-error' : 'bg-surface-container-lowest text-primary focus:ring-primary'"
+                min="0"
+                [placeholder]="isMissing('budget') ? 'Enter budget amount' : ''"
+              >
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 font-label-md text-label-md text-on-surface-variant uppercase font-semibold">INR Total</span>
+            </div>
+          </div>
+          @if (isMissing('budget') && !budget) {
+            <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('budget') }}
+            </span>
+          }
+        </div>
+
+        <!-- FIELD 5: Type of Travel -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('travellerType') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono font-bold"
+                [class]="isMissing('travellerType')
+                  ? 'bg-error text-on-error'
+                  : 'bg-primary-container text-on-primary'"
+              >5</span>
+              <span>Type of Travel</span>
+            </label>
+            <span class="font-label-sm text-label-sm" [class]="isMissing('travellerType') && !travellerType ? 'text-error font-bold' : 'text-on-surface-variant'">
+              @if (isMissing('travellerType') && !travellerType) {
+                Selection required
+              } @else {
+                Select best fit for pacing
+              }
+            </span>
+          </div>
+          @if (isMissing('travellerType') && !travellerType) {
+            <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('travellerType') }}
+            </span>
+          }
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            @for (tt of travellerTypes; track tt.value) {
+              <label
+                class="relative flex flex-col p-3.5 rounded-lg cursor-pointer shadow-sm hover:shadow transition-all"
+                [class]="travellerType === tt.value
+                  ? 'bg-surface-container-low border-2 border-secondary-container'
+                  : 'bg-surface-container-lowest hover:bg-surface-container-low'"
+              >
+                <input
+                  type="radio"
+                  name="travellerType"
+                  [value]="tt.value"
+                  [(ngModel)]="travellerType"
+                  class="peer sr-only"
+                >
+                @if (travellerType === tt.value) {
+                  <div class="flex absolute top-2 right-2 w-5 h-5 rounded-full bg-secondary-container text-on-secondary-container items-center justify-center">
+                    <span class="material-symbols-outlined text-[13px] font-bold">check</span>
+                  </div>
+                }
+                <span class="material-symbols-outlined text-[24px] mb-2" [class]="travellerType === tt.value ? 'text-primary' : 'text-on-surface-variant'">{{ tt.icon }}</span>
+                <span class="font-title-sm text-title-sm font-bold" [class]="travellerType === tt.value ? 'text-primary' : 'text-on-surface'">{{ tt.label }}</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ tt.desc }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- FIELD 6: Meal Preference -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <label class="font-label-md text-label-md font-bold flex items-center gap-2" [class]="isMissing('mealPreference') ? 'text-error' : 'text-primary'">
+              <span
+                class="w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-mono font-bold"
+                [class]="isMissing('mealPreference')
+                  ? 'bg-error text-on-error'
+                  : 'bg-primary-container text-on-primary'"
+              >6</span>
+              <span>Meal Preference & Culinary Integrity</span>
+            </label>
+          </div>
+          @if (isMissing('mealPreference') && !mealPreference) {
+            <span class="font-body-sm text-[11px] text-error flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">error</span> {{ fieldError('mealPreference') }}
+            </span>
+          }
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            @for (meal of mealOptions; track meal.value) {
+              <label
+                class="relative flex items-start gap-3 p-3.5 rounded-lg cursor-pointer shadow-sm"
+                [class]="mealPreference === meal.value
+                  ? 'bg-surface-container-low border-2 border-tertiary-fixed-dim'
+                  : 'bg-surface-container-lowest hover:bg-surface-container-low'"
+              >
+                <input
+                  type="radio"
+                  name="mealPreference"
+                  [value]="meal.value"
+                  [(ngModel)]="mealPreference"
+                  class="peer sr-only"
+                >
+                <div
+                  class="w-4 h-4 rounded-full mt-0.5 flex items-center justify-center shrink-0"
+                  [class]="mealPreference === meal.value ? 'bg-tertiary-container text-on-tertiary' : 'bg-surface-variant'"
+                >
+                  @if (mealPreference === meal.value) {
+                    <span class="material-symbols-outlined text-[12px] font-bold">check</span>
+                  }
+                </div>
+                <div class="space-y-0.5">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-title-sm text-title-sm font-bold" [class]="mealPreference === meal.value ? 'text-primary' : 'text-on-surface'">{{ meal.label }}</span>
+                    @if (meal.icon) {
+                      <span class="material-symbols-outlined text-tertiary-container text-[16px]">{{ meal.icon }}</span>
+                    }
+                  </div>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant">{{ meal.desc }}</p>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Destination & Advisory -->
+    <div class="lg:col-span-4 space-y-6">
+      <!-- Destination Visual Card -->
+      @if (source && destination) {
+        <div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+          <div class="relative h-44 w-full bg-gradient-to-br from-primary/30 to-primary-container/50">
+            <div class="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent"></div>
+            <div class="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+              <div>
+                <span class="font-label-sm text-label-sm text-secondary-container uppercase tracking-widest block font-bold">Destination</span>
+                <span class="font-headline-sm text-headline-sm text-on-primary">{{ destination }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="flex items-center justify-between text-on-surface">
+              <span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Route Strategy</span>
+              <span class="font-label-sm text-label-sm font-bold text-tertiary-container">{{ source }} → {{ destination }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Concierge Travel Advisory -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary text-[20px]">shield</span>
+          <span class="font-label-md text-label-md text-primary uppercase font-bold tracking-wide">Concierge Travel Advisory</span>
+        </div>
+
+        <div class="p-3 bg-surface-container-low rounded-lg space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-title-sm text-title-sm text-primary font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-secondary">info</span>
+              AI Validation Active
+            </span>
+          </div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">
+            Our AI has analyzed your prompt and extracted travel parameters. Fill in the missing fields above to generate your personalized itinerary.
+          </p>
+        </div>
+
+        <div class="p-3 bg-surface-container-low rounded-lg space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-title-sm text-title-sm text-primary font-bold flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-tertiary-container">verified</span>
+              Secure Processing
+            </span>
+          </div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">
+            Your travel parameters are processed securely. Pricing reflects real-time hotel & cab inventories.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom CTA Action Bar -->
+  <div class="mt-8 bg-surface-container-lowest rounded-xl p-6 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary shrink-0">
+        <span class="material-symbols-outlined text-[28px]">lock</span>
+      </div>
+      <div>
+        <span class="font-title-sm text-title-sm text-primary font-bold">TripNova Encrypted Travel Vault</span>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Your travel parameters and family identifiers are tokenized securely.</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 w-full md:w-auto shrink-0">
+      <button
+        type="button"
+        (click)="editPrompt()"
+        [disabled]="isLoading()"
+        class="w-full md:w-auto px-5 py-3 rounded-lg bg-surface-container hover:bg-surface-variant text-on-surface font-label-md text-label-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+      >
+        <span class="material-symbols-outlined text-[18px]">edit_note</span>
+        <span>Edit Prompt</span>
+      </button>
+      <button
+        type="button"
+        (click)="submitTrip()"
+        [disabled]="isLoading()"
+        class="w-full md:w-auto px-7 py-3 rounded-lg bg-secondary-container hover:brightness-105 text-on-secondary-container font-label-md text-label-md font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        @if (isLoading()) {
+          <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+          <span>Generating Itinerary…</span>
+        } @else {
+          <span>Validate & Generate Itinerary</span>
+          <span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Status messages -->
+  <section aria-live="polite" class="mt-4">
+    @switch (status()) {
+      @case ('error') {
+        <div role="alert" class="flex items-start gap-3 rounded-2xl bg-error-container p-5 text-on-error-container">
+          <span class="material-symbols-outlined text-[22px]">error</span>
+          <div class="space-y-1">
+            <p class="text-title-sm">We couldn't generate your itinerary</p>
+            <p class="text-body-md">{{ errorMessage() }}</p>
+          </div>
+        </div>
+      }
+      @case ('success') {
+        <div class="flex items-center gap-3 rounded-2xl bg-surface-container-lowest p-5 text-on-surface shadow-sm">
+          <span class="material-symbols-outlined text-[22px] text-tertiary-container">check_circle</span>
+          <p class="text-body-md">Your trip itinerary has been generated successfully!</p>
+        </div>
+      }
+      @default {}
+    }
+  </section>
+</div>

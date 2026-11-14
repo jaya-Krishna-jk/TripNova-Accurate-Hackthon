@@ -1,0 +1,155 @@
+<div class="mx-auto flex w-full max-w-7xl flex-col space-y-12">
+  <!-- Hero & AI trip prompt -->
+  <section
+    class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
+  >
+    <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-secondary-container/15 blur-3xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -left-20 bottom-0 h-80 w-80 rounded-full bg-primary-container/5 blur-2xl" aria-hidden="true"></div>
+
+    <div class="relative z-10 mx-auto flex max-w-5xl flex-col items-center space-y-6 text-center">
+      <span class="rounded-full bg-surface-container px-3.5 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">
+        AI-Powered Intelligent Travel Concierge
+      </span>
+
+      <div class="max-w-3xl space-y-3">
+        <h1 class="font-headline text-headline-lg tracking-tight text-primary md:text-headline-xl">
+          Where would you like to go next?
+        </h1>
+        <p class="mx-auto max-w-2xl text-body-lg text-on-surface-variant">
+          Tell us about your dream trip. Our private AI concierge synthesizes live flight matrices, luxury mountain
+          stays, and hyper-local culinary dossiers.
+        </p>
+      </div>
+
+      <!-- Prompt box -->
+      <form
+        id="prompt-hero-box"
+        class="w-full space-y-4 rounded-2xl bg-surface-container-lowest p-4 text-left shadow-md transition-all duration-300 lg:p-6"
+        (ngSubmit)="generateTrip()"
+        novalidate
+      >
+        <label for="main-ai-prompt" class="sr-only">Describe your trip</label>
+        <textarea
+          id="main-ai-prompt"
+          name="prompt"
+          rows="3"
+          [(ngModel)]="prompt"
+          [disabled]="isLoading()"
+          placeholder="Plan a 5-day family trip from Hyderabad to Ooty for 4 people with vegetarian dining and mountain view stays..."
+          class="w-full resize-none bg-transparent text-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none disabled:opacity-60"
+        ></textarea>
+
+        <!-- Context anchors -->
+        <div class="flex flex-wrap items-center gap-2 pt-2">
+          <span class="text-label-sm uppercase tracking-wider text-on-surface-variant">Context Anchor:</span>
+          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">location_on</span>
+            {{ anchor().origin }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">group</span>
+            {{ anchor().group }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+            <span class="material-symbols-outlined text-[14px] text-secondary" aria-hidden="true">payments</span>
+            {{ anchor().budget }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">calendar_today</span>
+            {{ anchor().duration }}
+          </span>
+        </div>
+
+        <!-- Action bar -->
+        <div
+          class="-mx-4 -mb-4 flex flex-col items-stretch justify-between gap-4 rounded-b-2xl bg-surface-container-low/50 px-4 py-3 pt-3 sm:flex-row sm:items-center lg:-mx-6 lg:-mb-6 lg:px-6"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">attach_file</span>
+              <span class="hidden text-label-sm md:inline">Attach Vouchers</span>
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mic</span>
+              <span class="hidden text-label-sm md:inline">Voice Input</span>
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Coming soon"
+              class="hidden cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm sm:flex"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>
+              <span class="text-label-sm">Filters: Veg Only</span>
+              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">expand_more</span>
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            data-testid="generate-trip"
+            [disabled]="!canSubmit()"
+            [attr.aria-busy]="isLoading()"
+            class="flex items-center justify-center gap-2.5 rounded-lg bg-secondary-container px-6 py-3 text-label-md font-bold tracking-tight text-on-secondary-container shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+          >
+            @if (isLoading()) {
+              <span class="material-symbols-outlined animate-spin text-[20px]" aria-hidden="true">progress_activity</span>
+              <span>Generating your trip…</span>
+            } @else {
+              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">auto_awesome</span>
+              <span>Generate My Trip</span>
+            }
+          </button>
+        </div>
+      </form>
+
+      <!-- Quick prompts -->
+      <div class="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+        <span class="mr-1 text-label-sm font-medium text-on-surface-variant">Quick Prompts:</span>
+        @for (quick of quickPrompts; track quick.label) {
+          <button
+            type="button"
+            (click)="applyQuickPrompt(quick)"
+            [disabled]="isLoading()"
+            class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-surface-container-lowest px-3.5 py-1.5 text-label-sm text-on-surface shadow-sm transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span class="material-symbols-outlined text-[16px] text-secondary" aria-hidden="true">{{ quick.icon }}</span>
+            <span>{{ quick.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Request status -->
+  <section aria-live="polite">
+    @switch (status()) {
+      @case ('error') {
+        <div role="alert" class="flex items-start gap-3 rounded-2xl bg-error-container p-5 text-on-error-container">
+          <span class="material-symbols-outlined text-[22px]" aria-hidden="true">error</span>
+          <div class="space-y-1">
+            <p class="text-title-sm">We couldn't send your trip request</p>
+            <p class="text-body-md">{{ errorMessage() }}</p>
+          </div>
+        </div>
+      }
+      @case ('success') {
+        <div class="flex items-center gap-3 rounded-2xl bg-surface-container-lowest p-5 text-on-surface shadow-sm">
+          <span class="material-symbols-outlined text-[22px] text-tertiary-container" aria-hidden="true">check_circle</span>
+          <p class="text-body-md">Your trip request was sent to the AI planner.</p>
+        </div>
+      }
+      @default {}
+    }
+  </section>
+</div>
