@@ -418,6 +418,22 @@ export class RealtimeDatabaseService {
     }
   }
 
+  /**
+   * Saves a booked trip under `userTrips/{tripId}` and returns the generated trip ID.
+   * The record keeps the `days` itinerary so the trip can later be loaded for tracking.
+   */
+  async createTrip(record: Record<string, unknown>): Promise<string> {
+    const tripId = this.createTripId();
+    // Realtime Database rejects `undefined`, so strip it by round-tripping through JSON.
+    const payload = JSON.parse(JSON.stringify(record)) as Record<string, unknown>;
+    await set(ref(this.getDatabase(), `userTrips/${tripId}`), {
+      ...payload,
+      tripId,
+      createdAt: serverTimestamp(),
+    });
+    return tripId;
+  }
+
   async registerUser(name: string, username: string, password: string): Promise<DemoUser> {
     const database = this.getDatabase();
     const userRef = ref(database, `demo-users/${this.getUserKey(username)}`);
@@ -599,6 +615,18 @@ export class RealtimeDatabaseService {
 
   private getUserKey(username: string): string {
     return encodeURIComponent(username.trim().toLowerCase());
+  }
+
+  /** Short, readable ID (e.g. `TN-7K2QX9`) that is safe to use as a Firebase key. */
+  private createTripId(): string {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(6);
+    if (globalThis.crypto?.getRandomValues) {
+      globalThis.crypto.getRandomValues(bytes);
+    } else {
+      bytes.forEach((_, i) => (bytes[i] = Math.floor(Math.random() * 256)));
+    }
+    return `TN-${Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')}`;
   }
 
   private createEventId(): string {

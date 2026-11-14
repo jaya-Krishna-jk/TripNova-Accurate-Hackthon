@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ItineraryDay, LooseValue } from '../../core/models/travel.models';
+import { BookingDialog } from './booking-dialog';
 
 interface BudgetSegment {
   name: string;
@@ -13,7 +14,7 @@ interface BudgetSegment {
 
 @Component({
   selector: 'app-itinerary-details-page',
-  imports: [RouterLink],
+  imports: [RouterLink, BookingDialog],
   templateUrl: './itinerary-details-page.html',
 })
 export class ItineraryDetailsPage implements OnInit {
@@ -29,6 +30,8 @@ export class ItineraryDetailsPage implements OnInit {
   protected readonly currentDay = computed(
     () => this.days.find((d) => d.day === this.selectedDay()) ?? this.days[0] ?? null,
   );
+
+  protected readonly bookingOpen = signal(false);
 
   private readonly segmentColors = ['bg-slate-900', 'bg-amber-500', 'bg-emerald-600', 'bg-sky-500', 'bg-slate-400', 'bg-rose-400'];
 

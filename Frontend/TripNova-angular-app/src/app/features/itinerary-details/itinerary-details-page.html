@@ -498,12 +498,15 @@
   </div>
   <button
     type="button"
-    disabled
-    title="Booking is coming soon"
-    class="flex cursor-not-allowed items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 px-7 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-950 opacity-70 shadow-lg shadow-amber-500/20"
+    (click)="bookingOpen.set(true)"
+    class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 px-7 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:brightness-105"
   >
     <span>Book This Journey</span>
     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_forward</span>
   </button>
 </div>
+
+@if (bookingOpen()) {
+  <app-booking-dialog [details]="d" [plan]="plan" [tripDetails]="tripDetails" (closed)="bookingOpen.set(false)" />
+}
 }
