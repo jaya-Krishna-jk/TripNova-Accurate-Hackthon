@@ -24,7 +24,6 @@ export const routes: Routes = [
     title: 'TripNova | Sign in',
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
-  { path: '**', redirectTo: '' },
   { path: 'mock-trip', component: TravelMockComponent },
-  { path: '', redirectTo: '/mock-trip', pathMatch: 'full' },
+  { path: '**', redirectTo: '' },
 ];
