@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const firebaseMocks = vi.hoisted(() => ({
   getDatabase: vi.fn(() => ({})),
+  get: vi.fn(),
   onValue: vi.fn(),
   ref: vi.fn((_database: unknown, path: string) => path),
   runTransaction: vi.fn(),
@@ -146,13 +147,13 @@ describe('RealtimeDatabaseService trip tracking', () => {
       type: 'missed', expectedStatus: 'in_progress', expectedCheckpointIndex: 0,
     }, 'event-2', 124)!;
     const recovered = applyTripTrackingAction(missed, {
-      type: 'recover', expectedStatus: 'missed', expectedCheckpointIndex: 0,
+      type: 'recover', expectedStatus: 'in_progress', expectedCheckpointIndex: 0,
     }, 'event-3', 125)!;
     const dropped = applyTripTrackingAction(recovered, {
       type: 'dropped', expectedStatus: 'in_progress', expectedCheckpointIndex: 1,
     }, 'event-4', 126)!;
     const skipped = applyTripTrackingAction(dropped, {
-      type: 'skip', expectedStatus: 'dropped', expectedCheckpointIndex: 1,
+      type: 'skip', expectedStatus: 'in_progress', expectedCheckpointIndex: 1,
     }, 'event-5', 127);
 
     expect(recovered.tracking).toMatchObject({ currentCheckpointIndex: 1, driftHrs: 2 });
@@ -217,6 +218,92 @@ describe('RealtimeDatabaseService trip tracking', () => {
       type: 'on_time', expectedStatus: 'in_progress', expectedCheckpointIndex: 0,
     });
 
-    expect(result).toEqual({ kind: 'rejected', trip: concurrentlyAdvanced });
+    expect(result).toEqual({ kind: 'rejected', trip: concurrentlyAdvanced, refreshRequired: true });
+  });
+});
+
+describe('RealtimeDatabaseService traveler-home live subscription', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('subscribes only to the exact approved child and forwards snapshots unchanged', () => {
+    const firstSnapshot: { exists: () => boolean; val: () => unknown } = {
+      exists: () => true, val: () => ({ userId: 'jk', revision: 1 }),
+    };
+    const updateSnapshot: { exists: () => boolean; val: () => unknown } = {
+      exists: () => true, val: () => ({ userId: 'jk', revision: 2 }),
+    };
+    const missingSnapshot: { exists: () => boolean; val: () => unknown } = {
+      exists: () => false, val: () => null,
+    };
+    const unsubscribe = vi.fn();
+    let receiveSnapshot: ((snapshot: typeof firstSnapshot) => void) | undefined;
+    firebaseMocks.onValue.mockImplementation((_ref, callback) => {
+      receiveSnapshot = callback;
+      return unsubscribe;
+    });
+    const service = new RealtimeDatabaseService();
+    const onSnapshot = vi.fn();
+
+    const stop = service.subscribeToTravelerHomeTrip(onSnapshot, vi.fn());
+
+    expect(firebaseMocks.ref).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.ref).toHaveBeenCalledWith({}, 'userTrips/TN-3UP9HH');
+    expect(firebaseMocks.onValue).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.onValue).toHaveBeenCalledWith(
+      'userTrips/TN-3UP9HH',
+      expect.any(Function),
+      expect.any(Function),
+    );
+
+    receiveSnapshot!(firstSnapshot);
+    receiveSnapshot!(updateSnapshot);
+    receiveSnapshot!(missingSnapshot);
+    expect(onSnapshot).toHaveBeenCalledTimes(3);
+    expect(onSnapshot.mock.calls[0][0]).toBe(firstSnapshot);
+    expect(onSnapshot.mock.calls[1][0]).toBe(updateSnapshot);
+    expect(onSnapshot.mock.calls[2][0]).toBe(missingSnapshot);
+
+    // This feature must observe the exact child only, never fetch, query, or write.
+    expect(firebaseMocks.getDatabase).toHaveBeenCalledTimes(1);
+    expect(firebaseMocks.get).not.toHaveBeenCalled();
+    expect(firebaseMocks.runTransaction).not.toHaveBeenCalled();
+    expect(firebaseMocks.set).not.toHaveBeenCalled();
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+    receiveSnapshot!(updateSnapshot);
+    expect(onSnapshot).toHaveBeenCalledTimes(3);
+  });
+
+  it('forwards listener errors and stops forwarding after unsubscribe', () => {
+    const unsubscribe = vi.fn();
+    let receiveSnapshot: ((snapshot: { exists: () => boolean; val: () => unknown }) => void) | undefined;
+    let receiveError: ((error: Error) => void) | undefined;
+    firebaseMocks.onValue.mockImplementation((_ref, onValue, onError) => {
+      receiveSnapshot = onValue;
+      receiveError = onError;
+      return unsubscribe;
+    });
+    const service = new RealtimeDatabaseService();
+    const onSnapshot = vi.fn();
+    const onError = vi.fn();
+
+    const stop = service.subscribeToTravelerHomeTrip(onSnapshot, onError);
+    const failure = new Error('permission denied');
+    receiveError!(failure);
+
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    receiveSnapshot!({ exists: () => true, val: () => ({ userId: 'jk' }) });
+    expect(onSnapshot).not.toHaveBeenCalled();
+
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    receiveError!(new Error('late error'));
+    expect(onError).toHaveBeenCalledTimes(1);
   });
 });
