@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ChatRequest, TravelRequest, ValidationResponse } from '../models/travel.models';
+import { ChatRequest, ChatResponse, TravelRequest, ValidationResponse } from '../models/travel.models';
 
 @Injectable({ providedIn: 'root' })
 export class TravelApiService {
@@ -14,8 +14,8 @@ export class TravelApiService {
     return this.http.post<ValidationResponse>(`${this.baseUrl}/travel/validate`, body);
   }
 
-  chat(request: TravelRequest): Observable<unknown> {
-    return this.http.post<unknown>(`${this.baseUrl}/travel/chat`, request);
+  chat(request: TravelRequest): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.baseUrl}/travel/chat`, request);
   }
 
   getErrorMessage(error: unknown): string {

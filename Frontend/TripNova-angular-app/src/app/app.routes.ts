@@ -16,6 +16,11 @@ export const routes: Routes = [
         title: 'TripNova | Complete Trip Details',
         loadComponent: () => import('./features/trip-details/trip-details-page').then((m) => m.TripDetailsPage),
       },
+      {
+        path: 'itinerary-suggestions',
+        title: 'TripNova | Itinerary Suggestions',
+        loadComponent: () => import('./features/itinerary-suggestions/itinerary-suggestions-page').then((m) => m.ItinerarySuggestionsPage),
+      },
     ],
   },
   {

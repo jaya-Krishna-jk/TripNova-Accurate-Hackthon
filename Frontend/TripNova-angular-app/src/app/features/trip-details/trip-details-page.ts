@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
-import { ExtractedTripData, TravelRequest } from '../../core/models/travel.models';
+import { ChatResponse, ExtractedTripData, TravelRequest } from '../../core/models/travel.models';
 
 interface ParameterCard {
   label: string;
@@ -219,8 +219,10 @@ export class TripDetailsPage implements OnInit {
     };
 
     try {
-      await firstValueFrom(this.travelApi.chat(request));
+      const response = await firstValueFrom(this.travelApi.chat(request));
+      this.tripState.chatResponse.set(response as ChatResponse);
       this.status.set('success');
+      this.router.navigate(['/itinerary-suggestions']);
     } catch (error) {
       this.errorMessage.set(this.travelApi.getErrorMessage(error));
       this.status.set('error');
