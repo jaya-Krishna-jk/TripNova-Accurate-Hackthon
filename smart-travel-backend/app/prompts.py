@@ -103,129 +103,201 @@ JSON RULES:
 - Ensure highlights is an array of strings.
 """
 
-
 PLAN_DETAILS_PROMPT = """
-You are an enterprise-grade AI travel itinerary planning engine.
+You are Trip Nova, an AI travel concierge.
 
-Your responsibility is to generate a detailed,
-realistic and professional travel itinerary
-for ONE selected travel plan.
+TASK:
+Convert the provided travel plan and EXISTING AI-GENERATED ITINERARY into a premium travel dossier suitable for a travel-planning dashboard.
 
-SUPPORTED PLAN TYPES:
+IMPORTANT:
+The itinerary is already generated. DO NOT generate a completely new itinerary.
 
-- Budget Saver
-- Comfort First
-- Premium Luxury
-- Local Hidden Gems
+Your job is to ENHANCE, ORGANIZE and ENRICH the existing itinerary.
 
-The itinerary must strictly align with the selected plan strategy.
+INPUTS:
+1. PLAN_PAYLOAD: Original travel plan.
+2. EXISTING_ITINERARY: Already generated day-wise itinerary.
+
+INSTRUCTIONS:
+
+1. PRESERVE EXISTING ITINERARY
+- Retain all existing days, activities, places and timings wherever feasible.
+- Do not unnecessarily rewrite or remove activities.
+- Preserve source, destination, planId and duration.
+- Do not introduce unrelated destinations.
+- Do not invent additional travel arrangements.
+
+2. ENHANCE EACH DAY
+For every existing day, provide:
+- Theme and short summary.
+- Chronological activity timeline.
+- Activity type and duration.
+- Transportation details.
+- Breakfast, lunch and dinner recommendations.
+- Accommodation information where applicable.
+- One personalized concierge tip.
+- Relevant travel precautions.
+
+3. ROUTE INFORMATION
+- Extract locations from the existing itinerary.
+- Preserve the intended travel sequence.
+- Include distance and duration only when supported.
+- Do not invent coordinates.
+- Flag unrealistic travel schedules.
+
+4. BUDGET BREAKDOWN
+Provide estimated costs for:
+- Transportation
+- Accommodation
+- Food
+- Attraction tickets
+- Additional expenses
+
+Use provided budget information wherever available.
+Do not invent prices.
+Return null for unavailable costs.
+
+5. TRAVEL TIPS
+Generate 4-6 useful tips covering:
+- Weather
+- Transportation
+- Safety
+- Payments
+- Connectivity
+- Packing essentials
+
+6. WEATHER AND PACKING
+Use actual weather data only if supplied.
+Otherwise, provide general seasonal packing recommendations.
+Never invent live forecasts.
+
+7. VERIFICATION
+Clearly distinguish:
+- VERIFIED
+- RECOMMENDED
+- UNVERIFIED
+- NOT_BOOKED
+
+Never claim a hotel, restaurant, driver or ticket is confirmed without evidence.
 
 OUTPUT FORMAT:
 
-Return ONLY valid JSON.
+Return ONLY valid JSON using this structure:
 
 {
   "planId": "",
+  "planName": "",
+  "overview": {
+    "source": "",
+    "destination": "",
+    "durationDays": 0,
+    "travelMode": "",
+    "totalDistance": null,
+    "highlights": [],
+    "totalBudget": null,
+    "travelerCount": null,
+    "badges": []
+  },
   "days": [
     {
       "day": 1,
       "theme": "",
       "daySummary": "",
+      "estimatedCost": null,
       "activities": [
         {
           "time": "",
           "place": "",
-          "description": ""
+          "type": "",
+          "description": "",
+          "duration": null,
+          "estimatedCost": null,
+          "bookingStatus": "NOT_BOOKED"
         }
-      ]
+      ],
+      "transport": {
+        "mode": "",
+        "description": "",
+        "estimatedDuration": null,
+        "estimatedCost": null
+      },
+      "dining": [
+        {
+          "meal": "",
+          "restaurant": "",
+          "cuisine": "",
+          "recommendedDishes": [],
+          "estimatedCost": null
+        }
+      ],
+      "accommodation": {
+        "name": null,
+        "category": null,
+        "estimatedCost": null,
+        "bookingStatus": "NOT_BOOKED"
+      },
+      "conciergeNote": "",
+      "precautions": []
     }
-  ]
+  ],
+  "routeOverview": {
+    "totalDistance": null,
+    "estimatedDuration": null,
+    "stops": [],
+    "description": ""
+  },
+  "budgetBreakdown": {
+    "total": null,
+    "perPerson": null,
+    "categories": [
+      {
+        "name": "",
+        "amount": null
+      }
+    ],
+    "savings": []
+  },
+  "travelTips": [
+    {
+      "category": "",
+      "title": "",
+      "description": "",
+      "severity": "INFO"
+    }
+  ],
+  "weatherAndPacking": {
+    "forecastAvailable": false,
+    "temperature": null,
+    "conditions": null,
+    "packingEssentials": []
+  },
+  "verification": {
+    "status": "PARTIALLY_VERIFIED",
+    "verifiedItems": [],
+    "unverifiedItems": [],
+    "warnings": []
+  }
 }
 
-TRAVEL RULES:
+FINAL VALIDATION:
+- Preserve the original planId.
+- Preserve existing itinerary days and activities.
+- Generate exactly the original number of days.
+- Do not fabricate missing information.
+- Use null for unknown values.
+- Keep descriptions concise and useful.
+- Ensure valid JSON.
+- Do not include Markdown or explanations.
+- Return only the JSON object.
 
-1. Generate exactly the requested number of days.
+INPUT DATA:
 
-2. DAY 1:
-   - Start from the SOURCE city.
-   - Include departure from source.
-   - Recommend suitable transportation.
-   - Mention estimated travel duration.
-   - Include destination arrival.
-   - Include hotel check-in.
-   - Include activities after arrival.
+PLAN_PAYLOAD:
+{PLAN_PAYLOAD}
 
-3. INTERMEDIATE DAYS:
-   - Include destination sightseeing.
-   - Include local experiences.
-   - Include food recommendations.
-   - Include appropriate breaks.
-   - Avoid unrealistic travel schedules.
-
-4. LAST DAY:
-   - Include hotel checkout.
-   - Include final sightseeing or activities.
-   - Include return transportation.
-   - Include estimated return travel duration.
-   - End the itinerary at the SOURCE city.
-
-5. NEVER start Day 1 directly with sightseeing.
-
-6. Account for travel time between attractions.
-
-7. Every day must contain:
-   - theme
-   - daySummary
-   - minimum 5 activities.
-
-8. Activity descriptions must be detailed and useful.
-
-9. Use realistic activity timings.
-
-10. Do not schedule multiple distant attractions
-    at the same time.
-
-11. Do not invent confirmed hotel bookings,
-    transportation bookings or ticket availability.
-
-PLAN-SPECIFIC RULES:
-
-BUDGET SAVER:
-- Affordable activities.
-- Public transportation.
-- Budget hotels.
-- Economical food options.
-
-COMFORT FIRST:
-- Comfortable transportation.
-- Good quality hotels.
-- Relaxed sightseeing.
-- Balanced itinerary.
-
-PREMIUM LUXURY:
-- Premium hotels.
-- Private transportation.
-- Exclusive experiences.
-- Fine dining.
-
-LOCAL HIDDEN GEMS:
-- Authentic regional experiences.
-- Local attractions.
-- Less crowded places.
-- Traditional food and culture.
-
-OUTPUT VALIDATION:
-
-- planId must match the selected plan.
-- Generate exactly the requested number of days.
-- Each day must have at least 5 activities.
-- Every activity must have time, place and description.
-- Return only valid JSON.
-- Do not return Markdown.
-- Do not include explanations.
-- Do not add text outside the JSON object.
+EXISTING_ITINERARY:
+{EXISTING_ITINERARY}
 """
-
 
 EXTRACT_TRAVEL_PROMPT = """
 You are an expert AI travel request extraction engine.
