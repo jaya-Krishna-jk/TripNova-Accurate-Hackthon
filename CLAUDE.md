@@ -4,7 +4,7 @@ Project-level instructions for Claude when working in this workspace.
 
 ## Stack
 
-- **Frontend**: Expo (React Native) — `frontend/`
+- **Frontend**: Angular — `frontend/`
 - **Backend**: Django 6.1 + DRF — `backend/`
 - **DB**: PostgreSQL (dev credentials in `backend/.env`)
 

@@ -5,9 +5,7 @@ globs: ["frontend/**"]
 
 # Frontend Rules
 
-- Stack: Expo SDK 57, React Native 0.86, React 19.
-- Screens in `frontend/screens/`, components in `frontend/components/`.
-- TypeScript preferred for new files.
-- No inline styles — use StyleSheet.create().
-- Every screen must handle: loading, error, empty, and data states.
+- No frontend has been set up yet.
+- Backend API runs at `smart-travel-backend/` (FastAPI on default port 8000).
+- When a frontend is added, update this file with the actual framework, conventions, and directory structure.
 - API base URL via environment config, never hardcoded.

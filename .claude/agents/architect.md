@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Designs system architecture for approved requirements. Use after requirements are ready — produces ADRs, component designs, API contracts, and data model changes. Requires an approved FEAT-XXX requirements doc.
+description: Designs system architecture for approved requirements. Use after requirements are ready — produces ADRs, component designs, and API contracts. Stack is FastAPI + OpenAI SDK (via OpenRouter), stateless (no DB). Requires an approved FEAT-XXX requirements doc.
 tools: Read, Grep, Glob, Write, Bash
 model: inherit
 color: blue

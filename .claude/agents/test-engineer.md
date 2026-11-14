@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-description: Writes and runs tests to verify implementation satisfies acceptance criteria. Use after implementation tasks are complete to establish independent quality verification.
+description: Writes and runs tests to verify implementation satisfies acceptance criteria. Use after implementation tasks are complete. Stack is FastAPI (pytest + httpx for API tests).
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 color: purple

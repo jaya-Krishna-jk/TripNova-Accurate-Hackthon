@@ -1,41 +1,7 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-// React Native Expo .cursorrules
-
-// React Native Expo best practices
-
-const reactNativeExpoBestPractices = [
-  "Use functional components with hooks",
-  "Utilize Expo SDK features and APIs",
-  "Implement proper navigation using Expo Router",
-  "Use Expo's asset system for images and fonts",
-  "Implement proper error handling and crash reporting",
-  "Utilize Expo's push notification system",
-];
-
-// Folder structure
-
-const folderStructure = `
-assets/
-src/
-  components/
-  screens/
-  navigation/
-  hooks/
-  utils/
-App.js
-app.json
-`;
-
-// Additional instructions
-
-const additionalInstructions = `
-1. Use TypeScript for type safety
-2. Implement proper styling using StyleSheet
-3. Utilize Expo's vector icons
-4. Use Expo's secure store for sensitive data
-5. Implement proper offline support
-6. Follow React Native best practices for performance
-7. Use Expo's OTA updates for quick deployments
-`;
+// React Native Expo rules — INACTIVE
+// No frontend has been set up yet for this project.
+// When a frontend is added, update this file with the actual framework conventions.
+// The backend API is at smart-travel-backend/ running FastAPI on port 8000.

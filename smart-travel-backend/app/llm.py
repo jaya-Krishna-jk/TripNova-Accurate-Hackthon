@@ -17,7 +17,7 @@ client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
-MODEL = "deepseek/deepseek-chat"
+MODEL = "NVIDIA: Nemotron 3 Ultra (free)"
 
 
 def extract_trip_request(user_message: str):

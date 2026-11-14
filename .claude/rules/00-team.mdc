@@ -12,8 +12,8 @@ This workspace uses a structured AI development team. Each agent has a defined r
 - product-manager → requirements
 - architect → system design
 - planner → task breakdown
-- frontend-engineer → Expo/React Native
-- backend-engineer → Django/DRF
+- frontend-engineer → Frontend (TBD — not yet set up)
+- backend-engineer → FastAPI + OpenAI SDK (via OpenRouter)
 - test-engineer → tests
 - code-reviewer → reviews
 - security-reviewer → security audits

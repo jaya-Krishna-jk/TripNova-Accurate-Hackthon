@@ -98,8 +98,8 @@ Agents must use:
 | `product-manager` | Requirements, PRDs, acceptance criteria |
 | `architect` | System design, ADRs, technical decisions |
 | `planner` | Task breakdown, dependency ordering |
-| `frontend-engineer` | Expo/React Native implementation |
-| `backend-engineer` | Django/DRF implementation |
+| `frontend-engineer` | Angular implementation ( ) |
+| `backend-engineer` | FastAPI/Pydantic backend implementation |
 | `test-engineer` | Test strategy and test writing |
 | `code-reviewer` | Code review and quality gates |
 | `security-reviewer` | Security audit and threat modelling |
