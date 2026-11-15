@@ -498,7 +498,7 @@
   </dialog>
 
   <!-- Hero & AI trip prompt: only when there is no trip to show -->
-  @if (tripState.kind === 'live') {
+  @if (tripState.kind === 'empty') {
     <section
       class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
     >
@@ -537,27 +537,6 @@
             placeholder="Plan a 5-day family trip from Hyderabad to Ooty for 4 people with vegetarian dining and mountain view stays..."
             class="w-full resize-none bg-transparent text-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none disabled:opacity-60"
           ></textarea>
-
-          <!-- Context anchors -->
-          <div class="flex flex-wrap items-center gap-2 pt-2">
-            <span class="text-label-sm uppercase tracking-wider text-on-surface-variant">Context Anchor:</span>
-            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">location_on</span>
-              {{ anchor().origin }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">group</span>
-              {{ anchor().group }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-              <span class="material-symbols-outlined text-[14px] text-secondary" aria-hidden="true">payments</span>
-              {{ anchor().budget }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">calendar_today</span>
-              {{ anchor().duration }}
-            </span>
-          </div>
 
           <!-- Action bar -->
           <div
