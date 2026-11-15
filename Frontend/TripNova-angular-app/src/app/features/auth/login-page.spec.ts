@@ -36,7 +36,7 @@ describe('LoginPage', () => {
     const fixture = TestBed.createComponent(LoginPage);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h2')?.textContent).toContain('Sign in');
+    expect(compiled.querySelector('h2')?.textContent).toContain('Welcome back');
     expect(compiled.querySelector('input[name="username"]')).toBeTruthy();
   });
 

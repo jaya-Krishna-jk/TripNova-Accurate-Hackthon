@@ -18,6 +18,8 @@ export class LoginPage {
   protected readonly isLoading = signal(false);
   protected readonly isSignUp = signal(false);
   protected readonly successMessage = signal('');
+  protected readonly showPassword = signal(false);
+  protected readonly pillars = ['AI-Crafted Itineraries', 'Live Trip Tracking & Smart Re-Planning', 'Transparent Budgets'];
 
   constructor(
     private readonly databaseService: RealtimeDatabaseService,

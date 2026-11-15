@@ -1,58 +1,172 @@
-<main class="login-page">
-	<section class="brand-panel" aria-label="TripNova">
-		<div class="brand-mark" aria-hidden="true">
-			<span class="brand-mark__ring"></span>
-			<span class="brand-mark__dot"></span>
-		</div>
-		<p class="eyebrow">TripNova</p>
-		<h1>Find your next <em>great escape.</em></h1>
-		<p class="brand-copy">Sign in to continue planning your journey.</p>
-		<div class="route-line" aria-hidden="true">
-			<span class="route-line__pin">+</span>
-			<span class="route-line__path"></span>
-			<span class="route-line__pin route-line__pin--end"></span>
-		</div>
-	</section>
+<!-- Layout follows the Stitch "Login Screen" design, using the app's shared fonts and tokens. -->
+<main class="flex min-h-dvh w-full flex-col overflow-hidden bg-surface text-on-surface lg:flex-row">
 
-	<section class="form-panel">
-		<div class="mobile-brand">TRIP<span>NOVA</span></div>
-		<div class="login-card">
-			<p class="eyebrow eyebrow--dark">Your journey starts here</p>
-			<h2>{{ isSignUp() ? 'Create your account' : 'Welcome back' }}</h2>
-			<p class="form-intro">{{ isSignUp() ? 'Set up your TripNova profile.' : 'Sign in to continue to TripNova.' }}</p>
+  <!-- Brand panel -->
+  <section
+    class="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white sm:p-12 lg:w-5/12 lg:p-16 xl:w-1/2"
+    aria-label="Trip Nova"
+  >
+    <div class="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute -bottom-32 right-0 h-[500px] w-[500px] rounded-full bg-emerald-500/10 blur-3xl" aria-hidden="true"></div>
 
-			<form (ngSubmit)="submit()">
-					@if (isSignUp()) {
-						<label for="name">Name</label>
-						<input id="name" name="name" type="text" autocomplete="name" [(ngModel)]="name" required />
-					}
+    <header class="relative z-10 flex items-center gap-3.5">
+      <span
+        class="flex h-11 w-11 items-center justify-center rounded-full border border-amber-400/40 bg-slate-950 text-amber-400 shadow-lg shadow-amber-500/20"
+        aria-hidden="true"
+      >
+        <span class="material-symbols-outlined text-[22px]">travel_explore</span>
+      </span>
+      <span class="flex flex-col">
+        <span class="font-headline text-2xl font-semibold leading-none tracking-tight text-white">Trip Nova</span>
+        <span class="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-amber-400/90">AI Travel Concierge</span>
+      </span>
+    </header>
 
-					<label for="username">Username</label>
-					<input id="username" name="username" type="text" autocomplete="username" [(ngModel)]="username" required />
+    <div class="relative z-10 my-12 max-w-xl lg:my-auto">
+      <h1 class="font-headline text-4xl font-medium leading-[1.12] text-slate-100 sm:text-5xl lg:text-6xl">
+        Craft your next
+        <span class="block italic text-amber-400">unforgettable escape.</span>
+      </h1>
+      <p class="mt-6 max-w-md text-body-lg text-white/70">
+        Sign in to plan day-wise itineraries, track your live trip and re-balance your journey on the go.
+      </p>
+    </div>
 
-					<label for="password">Password</label>
-					<input id="password" name="password" type="password" [autocomplete]="isSignUp() ? 'new-password' : 'current-password'" [(ngModel)]="password" required />
+    <footer class="relative z-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-8 text-xs text-slate-400">
+      @for (pillar of pillars; track pillar) {
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true"></span>
+          <span>{{ pillar }}</span>
+        </div>
+      }
+    </footer>
+  </section>
 
-					@if (errorMessage()) {
-						<p class="form-message form-message--error" role="alert">{{ errorMessage() }}</p>
-					}
-					@if (successMessage()) {
-						<p class="form-message form-message--success" role="status">{{ successMessage() }}</p>
-					}
+  <!-- Auth panel -->
+  <section class="flex flex-1 flex-col justify-between p-6 sm:p-12 lg:p-20">
+    <div class="mx-auto my-auto w-full max-w-md py-8">
+      <div class="mb-8">
+        <div class="mb-2 inline-flex items-center gap-2 text-label-sm uppercase tracking-wider text-secondary">
+          <span class="h-1.5 w-1.5 rounded-full bg-secondary" aria-hidden="true"></span>
+          {{ isSignUp() ? 'New Member' : 'Member Access' }}
+        </div>
+        <h2 class="font-headline text-headline-lg tracking-tight text-primary">
+          {{ isSignUp() ? 'Create your account' : 'Welcome back' }}
+        </h2>
+        <p class="mt-2 text-body-md text-on-surface-variant">
+          {{ isSignUp()
+            ? 'Set up your Trip Nova profile to start planning.'
+            : 'Enter your credentials to access your journeys and tailored itineraries.' }}
+        </p>
+      </div>
 
-					<button type="submit" class="submit-button" [disabled]="isLoading()">
-						<span>{{ isLoading() ? 'Please wait...' : isSignUp() ? 'Create account' : 'Sign in' }}</span>
-						<span aria-hidden="true">&#8594;</span>
-					</button>
-			</form>
+      <form class="space-y-4" (ngSubmit)="submit()">
+        @if (isSignUp()) {
+          <div>
+            <label for="name" class="mb-1.5 block text-label-sm uppercase tracking-wider text-on-surface-variant">Name</label>
+            <div class="relative">
+              <span class="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-outline" aria-hidden="true">badge</span>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autocomplete="name"
+                placeholder="Your full name"
+                [(ngModel)]="name"
+                required
+                class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest py-2.5 pl-10 pr-4 text-body-md text-on-surface shadow-sm transition-all placeholder:text-on-surface-variant/60 focus:border-secondary-fixed-dim focus:outline-none focus:ring-2 focus:ring-secondary-fixed-dim"
+              />
+            </div>
+          </div>
+        }
 
-			<p class="switch-mode">
-				{{ isSignUp() ? 'Already have an account?' : 'New to TripNova?' }}
-				<button type="button" class="text-button text-button--strong" (click)="toggleMode()">
-					{{ isSignUp() ? 'Sign in' : 'Create account' }}
-				</button>
-			</p>
-			<p class="legal-copy">By continuing, you agree to use TripNova responsibly while planning your travels.</p>
-		</div>
-	</section>
+        <div>
+          <label for="username" class="mb-1.5 block text-label-sm uppercase tracking-wider text-on-surface-variant">Username</label>
+          <div class="relative">
+            <span class="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-outline" aria-hidden="true">person</span>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Your username"
+              [(ngModel)]="username"
+              required
+              class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest py-2.5 pl-10 pr-4 text-body-md text-on-surface shadow-sm transition-all placeholder:text-on-surface-variant/60 focus:border-secondary-fixed-dim focus:outline-none focus:ring-2 focus:ring-secondary-fixed-dim"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="mb-1.5 block text-label-sm uppercase tracking-wider text-on-surface-variant">Password</label>
+          <div class="relative">
+            <span class="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-outline" aria-hidden="true">lock</span>
+            <input
+              id="password"
+              name="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              [autocomplete]="isSignUp() ? 'new-password' : 'current-password'"
+              placeholder="••••••••"
+              [(ngModel)]="password"
+              required
+              class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest py-2.5 pl-10 pr-11 text-body-md text-on-surface shadow-sm transition-all placeholder:text-on-surface-variant/60 focus:border-secondary-fixed-dim focus:outline-none focus:ring-2 focus:ring-secondary-fixed-dim"
+            />
+            <button
+              type="button"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="showPassword()"
+              class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-outline hover:text-on-surface"
+            >
+              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        @if (errorMessage()) {
+          <p role="alert" class="flex items-start gap-2 rounded-xl bg-error-container p-3 text-body-sm text-on-error-container">
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">error</span>
+            <span>{{ errorMessage() }}</span>
+          </p>
+        }
+        @if (successMessage()) {
+          <p role="status" class="flex items-start gap-2 rounded-xl bg-surface-container-low p-3 text-body-sm text-tertiary-container">
+            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check_circle</span>
+            <span>{{ successMessage() }}</span>
+          </p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="isLoading()"
+          class="group !mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 px-6 py-3 text-body-md font-bold tracking-wide text-slate-950 shadow-lg shadow-amber-500/25 transition-all hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          @if (isLoading()) {
+            <span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span>
+            <span>Please wait…</span>
+          } @else {
+            <span>{{ isSignUp() ? 'Create Account' : 'Sign In to Your Journey' }}</span>
+            <span class="material-symbols-outlined text-[18px] transition-transform group-hover:translate-x-1" aria-hidden="true">arrow_forward</span>
+          }
+        </button>
+      </form>
+
+      <div class="mt-8 border-t border-outline-variant/60 pt-6 text-center">
+        <p class="text-body-sm text-on-surface-variant">
+          {{ isSignUp() ? 'Already have an account?' : 'New to Trip Nova?' }}
+          <button
+            type="button"
+            (click)="toggleMode()"
+            class="ml-1 font-bold text-secondary underline decoration-secondary-fixed-dim underline-offset-4 transition-colors hover:text-on-secondary-fixed-variant"
+          >
+            {{ isSignUp() ? 'Sign in' : 'Create account' }}
+          </button>
+        </p>
+      </div>
+    </div>
+
+    <footer class="mt-6 text-center text-[11px] text-on-surface-variant/70">
+      By continuing, you agree to use Trip Nova responsibly while planning your travels.
+    </footer>
+  </section>
 </main>

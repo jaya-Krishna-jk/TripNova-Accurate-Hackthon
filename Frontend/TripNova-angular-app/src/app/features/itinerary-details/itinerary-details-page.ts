@@ -79,6 +79,23 @@ export class ItineraryDetailsPage implements OnInit {
     return Math.round((total / cap) * 1000) / 10;
   }
 
+  /**
+   * Calendar date of an itinerary day, counted from the trip start date
+   * (day 1 = start date). Empty when the trip has no usable start date.
+   */
+  protected dayDate(day: number, weekday = true): string {
+    const match = (this.tripDetails?.startDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match || !Number.isFinite(day)) return '';
+    // Built from parts so the date stays in local time (no UTC shift).
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + day - 1);
+    return date.toLocaleDateString('en-IN', {
+      weekday: weekday ? 'short' : undefined,
+      day: 'numeric',
+      month: 'short',
+      year: weekday ? 'numeric' : undefined,
+    });
+  }
+
   protected selectDay(day: number): void {
     this.selectedDay.set(day);
   }

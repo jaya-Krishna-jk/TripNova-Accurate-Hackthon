@@ -28,9 +28,13 @@
         <div class="w-8 h-[2px] bg-tertiary-fixed-dim"></div>
         <div class="flex items-center gap-2">
           <div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-label-sm text-label-sm font-bold shadow-sm">
-            {{ missingCount }}
+            @if (missingCount) {
+              {{ missingCount }}
+            } @else {
+              <span class="material-symbols-outlined text-[15px]">check</span>
+            }
           </div>
-          <span class="font-label-sm text-label-sm text-primary font-bold">Missing Parameters Required</span>
+          <span class="font-label-sm text-label-sm text-primary font-bold">{{ missingCount ? 'Missing Parameters Required' : 'All Parameters Provided' }}</span>
         </div>
         <div class="w-8 h-[2px] bg-surface-variant"></div>
         <div class="flex items-center gap-2 opacity-50">
@@ -44,63 +48,8 @@
   <!-- Main Layout Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- Left Column: Extraction Summary + Form -->
+    <!-- Left Column: Form -->
     <div class="lg:col-span-8 space-y-6">
-
-      <!-- AI Prompt Validation Diagnostic Banner -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-variant">
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">troubleshoot</span>
-              <span class="font-label-md text-label-md text-primary uppercase tracking-wide">AI Prompt Validation Diagnostic</span>
-              <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">
-                <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
-                <span class="font-label-sm text-label-sm font-bold">{{ missingCount }} Parameters Need Review</span>
-              </div>
-            </div>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">Extracted from your travel prompt. Review and confirm highlighted values below.</p>
-          </div>
-          <div class="flex items-center gap-2 shrink-0 bg-surface-container-low px-3 py-1.5 rounded-lg text-on-surface-variant font-label-sm text-label-sm">
-            <span class="material-symbols-outlined text-[16px] text-tertiary-container">verified</span>
-            <span>{{ detectedCount }} / {{ parameterCards.length }} Parameters Analyzed</span>
-          </div>
-        </div>
-
-        <!-- 6-Card Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-1">
-          @for (card of parameterCards; track card.field; let i = $index) {
-            <div
-              class="p-3.5 rounded-xl flex flex-col justify-between space-y-2"
-              [class]="card.detected
-                ? 'bg-surface-container-low border border-surface-variant/50'
-                : 'bg-error-container/20 border-2 border-error shadow-sm'"
-            >
-              <div class="flex items-center justify-between">
-                <span class="font-label-sm text-[11px] uppercase tracking-wider font-semibold" [class]="card.detected ? 'text-on-surface-variant' : 'text-error'">{{ i + 1 }}. {{ card.label }}</span>
-                @if (card.detected) {
-                  <span class="font-label-sm text-[11px] text-tertiary-container bg-surface-container-lowest px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
-                    <span class="material-symbols-outlined text-[12px]">check_circle</span> Detected
-                  </span>
-                } @else {
-                  <span class="font-label-sm text-[11px] text-error bg-error-container px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm">
-                    <span class="material-symbols-outlined text-[12px]">error</span> Missing
-                  </span>
-                }
-              </div>
-              <div>
-                @if (card.detected) {
-                  <span class="font-title-sm text-title-sm font-bold block leading-snug text-primary">{{ card.value }}</span>
-                  <span class="font-body-sm text-[11px] text-on-surface-variant">{{ card.subtitle }}</span>
-                } @else {
-                  <span class="font-title-sm text-title-sm font-bold block leading-snug text-error">— Not provided</span>
-                  <span class="font-body-sm text-[11px] text-error font-medium">{{ card.subtitle }}</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </div>
 
       <!-- Calibration Form -->
       <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm space-y-8">
@@ -110,7 +59,11 @@
             <h2 class="font-headline-sm text-headline-sm text-primary">Required Trip Parameter Calibration</h2>
           </div>
           <span class="font-label-sm text-label-sm text-tertiary-container bg-surface-container px-3 py-1 rounded-full font-bold">
-            {{ missingCount }} Fields Required
+            @if (missingCount) {
+              {{ missingCount }} {{ missingCount === 1 ? 'Field' : 'Fields' }} Required
+            } @else {
+              All Details Provided
+            }
           </span>
         </div>
 

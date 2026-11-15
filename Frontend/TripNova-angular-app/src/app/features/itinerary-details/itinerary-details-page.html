@@ -124,6 +124,12 @@
         >
           <span [class]="day.day === selectedDay() ? 'text-amber-400' : 'text-amber-600'">Day {{ day.day }}:</span>
           {{ day.theme }}
+          @if (dayDate(day.day, false); as date) {
+            <span
+              class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+              [class]="day.day === selectedDay() ? 'bg-white/15 text-white/90' : 'bg-slate-100 text-slate-500'"
+            >{{ date }}</span>
+          }
         </button>
       }
     </div>
@@ -139,6 +145,12 @@
           <div class="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-6 md:p-8">
             <div class="mb-1.5 flex items-center gap-2.5">
               <span class="rounded-lg bg-slate-900 px-3 py-0.5 text-xs font-bold tracking-wider text-white">DAY {{ day.day }}</span>
+              @if (dayDate(day.day); as date) {
+                <span class="flex items-center gap-1 text-xs font-semibold text-slate-600">
+                  <span class="material-symbols-outlined text-[14px] text-amber-600" aria-hidden="true">calendar_today</span>
+                  {{ date }}
+                </span>
+              }
               @if (money(day.estimatedCost)) {
                 <span class="text-xs font-medium text-slate-400">• Est. {{ money(day.estimatedCost) }}</span>
               }
