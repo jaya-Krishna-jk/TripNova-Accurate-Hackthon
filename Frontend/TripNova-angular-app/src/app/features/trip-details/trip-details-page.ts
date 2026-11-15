@@ -4,15 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
-import { ChatResponse, ExtractedTripData, TravelRequest } from '../../core/models/travel.models';
-
-interface ParameterCard {
-  label: string;
-  field: string;
-  value: string | null;
-  detected: boolean;
-  subtitle: string;
-}
+import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
 
 type PageStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -40,12 +32,11 @@ export class TripDetailsPage implements OnInit {
   protected travellerCount = 0;
   protected childrenCount = 0;
   protected seniorCitizenCount = 0;
-  protected budget = 0;
+  protected budget: number | null = null;
   protected travellerType = '';
   protected mealPreference = '';
 
   protected missingFields: string[] = [];
-  protected parameterCards: ParameterCard[] = [];
 
   protected readonly travellerTypes = [
     { value: 'Family', icon: 'escalator_warning', label: 'Family', desc: 'Kids & multi-gen' },
@@ -60,6 +51,18 @@ export class TripDetailsPage implements OnInit {
     { value: 'Non-Veg', label: 'Non-Vegetarian', icon: '', desc: 'Regional specialties & continental cuisine' },
   ];
 
+  /** Fields the trip request cannot be generated without. */
+  private readonly requiredFields = [
+    'source',
+    'destination',
+    'startDate',
+    'endDate',
+    'travellerCount',
+    'travellerType',
+    'budget',
+    'mealPreference',
+  ];
+
   ngOnInit(): void {
     const validation = this.tripState.validationResult();
     if (!validation) {
@@ -68,71 +71,84 @@ export class TripDetailsPage implements OnInit {
     }
 
     const data = validation.extractedData;
-    this.missingFields = validation.missingFields;
 
-    this.source = data.source ?? '';
-    this.destination = data.destination ?? '';
-    this.startDate = data.startDate ?? '';
-    this.endDate = data.endDate ?? '';
-    this.travellerCount = data.travellerCount ?? 0;
-    this.childrenCount = data.childrenCount ?? 0;
-    this.seniorCitizenCount = data.seniorCitizenCount ?? 0;
-    this.budget = data.budget ?? 0;
+    this.source = (data.source ?? '').trim();
+    this.destination = (data.destination ?? '').trim();
+    this.startDate = this.toIsoDate(data.startDate);
+    this.endDate = this.toIsoDate(data.endDate);
+    this.travellerCount = this.toNumber(data.travellerCount) ?? 0;
+    this.childrenCount = this.toNumber(data.childrenCount) ?? 0;
+    this.seniorCitizenCount = this.toNumber(data.seniorCitizenCount) ?? 0;
+    this.budget = this.toNumber(data.budget);
     this.travellerType = data.travellerType ?? '';
     this.mealPreference = data.mealPreference ?? '';
 
-    this.buildParameterCards(data);
+    // Flag what the API reported plus any required field that arrived unusable
+    // (e.g. a zero budget or an unparseable date).
+    const flagged = new Set(validation.missingFields ?? []);
+    for (const field of this.requiredFields) {
+      if (!this.hasValue(field)) flagged.add(field);
+    }
+    this.missingFields = [...flagged];
   }
 
-  private buildParameterCards(data: ExtractedTripData): void {
-    this.parameterCards = [
-      {
-        label: 'Route',
-        field: 'source',
-        value: data.source && data.destination ? `${data.source} → ${data.destination}` : null,
-        detected: !this.missingFields.includes('source') && !this.missingFields.includes('destination'),
-        subtitle: data.source && data.destination ? `${data.source} to ${data.destination}` : 'Route not detected',
-      },
-      {
-        label: 'Travel Dates',
-        field: 'startDate',
-        value: data.startDate && data.endDate ? `${data.startDate} — ${data.endDate}` : data.startDate || data.endDate || null,
-        detected: !this.missingFields.includes('startDate') && !this.missingFields.includes('endDate'),
-        subtitle: data.startDate ? 'Calendar range provided' : 'Calendar range required',
-      },
-      {
-        label: 'Travellers',
-        field: 'travellerCount',
-        value: data.travellerCount ? `${data.travellerCount} Travellers` : null,
-        detected: !this.missingFields.includes('travellerCount'),
-        subtitle: data.travellerType ?? 'Type not specified',
-      },
-      {
-        label: 'Total Budget',
-        field: 'budget',
-        value: data.budget ? `₹${data.budget.toLocaleString('en-IN')} INR` : null,
-        detected: !this.missingFields.includes('budget'),
-        subtitle: data.budget ? 'Confirm total' : 'Budget required',
-      },
-      {
-        label: 'Travel Style',
-        field: 'travellerType',
-        value: data.travellerType ?? null,
-        detected: !this.missingFields.includes('travellerType'),
-        subtitle: data.travellerType ?? 'Not detected',
-      },
-      {
-        label: 'Meal Type',
-        field: 'mealPreference',
-        value: data.mealPreference ?? null,
-        detected: !this.missingFields.includes('mealPreference'),
-        subtitle: data.mealPreference ?? 'Not specified',
-      },
-    ];
+  /**
+   * Coerces an AI-extracted amount to a positive number. Accepts numbers and
+   * strings such as "30000", "₹30,000", "30k" or "1.5 lakh"; null when unusable.
+   */
+  private toNumber(value: unknown): number | null {
+    if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value : null;
+    if (typeof value !== 'string') return null;
+
+    const match = value.replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(k|lakhs?|lacs?|l)?\b/i);
+    if (!match) return null;
+    const unit = (match[2] ?? '').toLowerCase();
+    const multiplier = unit === 'k' ? 1_000 : unit ? 100_000 : 1;
+    const amount = Math.round(parseFloat(match[1]) * multiplier);
+    return amount > 0 ? amount : null;
   }
 
+  /** Normalises an AI-extracted date to the `yyyy-MM-dd` form a date input needs. */
+  private toIsoDate(value: unknown): string {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    const iso = value.trim().match(/^\d{4}-\d{2}-\d{2}/);
+    if (iso) return iso[0];
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${parsed.getFullYear()}-${month}-${day}`;
+  }
+
+  /** Whether the form currently holds a usable value for the field. */
+  private hasValue(field: string): boolean {
+    switch (field) {
+      case 'source':
+        return !!this.source.trim();
+      case 'destination':
+        return !!this.destination.trim();
+      case 'startDate':
+        return !!this.startDate;
+      case 'endDate':
+        return !!this.endDate;
+      case 'travellerCount':
+        return this.travellerCount > 0;
+      case 'budget':
+        return !!this.budget && this.budget > 0;
+      case 'travellerType':
+        return !!this.travellerType;
+      case 'mealPreference':
+        return !!this.mealPreference;
+      default:
+        // Optional counters (children, seniors): zero is a valid answer.
+        return true;
+    }
+  }
+
+  /** True while a flagged field is still empty; clears as soon as the user fills it in. */
   protected isMissing(field: string): boolean {
-    return this.missingFields.includes(field);
+    return this.missingFields.includes(field) && !this.hasValue(field);
   }
 
   private readonly fieldErrorMessages: Record<string, string> = {
@@ -147,15 +163,12 @@ export class TripDetailsPage implements OnInit {
   };
 
   protected fieldError(field: string): string {
-    return this.missingFields.includes(field) ? this.fieldErrorMessages[field] ?? 'This field is required' : '';
+    return this.isMissing(field) ? this.fieldErrorMessages[field] ?? 'This field is required' : '';
   }
 
-  protected get detectedCount(): number {
-    return this.parameterCards.filter((c) => c.detected).length;
-  }
-
+  /** Flagged fields the user has not filled in yet. */
   protected get missingCount(): number {
-    return this.missingFields.length;
+    return this.missingFields.filter((field) => this.isMissing(field)).length;
   }
 
   protected get routeLabel(): string {
@@ -210,7 +223,7 @@ export class TripDetailsPage implements OnInit {
       endDate: this.endDate,
       travellerCount: this.travellerCount,
       travellerType: this.travellerType,
-      budget: this.budget,
+      budget: this.budget ?? 0,
       mealPreference: this.mealPreference,
       childrenCount: this.childrenCount,
       seniorCitizenCount: this.seniorCitizenCount,

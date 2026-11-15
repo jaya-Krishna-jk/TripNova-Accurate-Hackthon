@@ -1,9 +1,12 @@
 import { Routes } from '@angular/router';
 import { TravelMockComponent } from './travel-mock/travel-mock.component';
+import { authGuard, guestGuard } from './auth.guards';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [authGuard],
+    canActivateChild: [authGuard],
     loadComponent: () => import('./layout/dashboard-shell').then((m) => m.DashboardShell),
     children: [
       {
@@ -42,9 +45,10 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    canActivate: [guestGuard],
     title: 'TripNova | Sign in',
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
-  { path: 'mock-trip', component: TravelMockComponent },
+  { path: 'mock-trip', component: TravelMockComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' },
 ];

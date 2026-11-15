@@ -530,6 +530,9 @@ Rules:
 
 - Do not guess values.
 - Extract only what user explicitly mentions.
+- budget must be a plain number in INR with no currency symbol,
+  commas or words (e.g. "30k" -> 30000, "1.5 lakh" -> 150000).
+- startDate and endDate must be in YYYY-MM-DD format.
 
 Traveller Types:
 - Solo

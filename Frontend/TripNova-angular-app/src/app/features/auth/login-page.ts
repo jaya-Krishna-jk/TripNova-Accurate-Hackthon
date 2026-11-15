@@ -1,6 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DemoUser, RealtimeDatabaseService } from '../../realtime-database.service';
+import { Router } from '@angular/router';
+import { RealtimeDatabaseService } from '../../realtime-database.service';
+import { UserSessionService } from '../../user-session.service';
 
 @Component({
   imports: [FormsModule],
@@ -16,9 +18,14 @@ export class LoginPage {
   protected readonly isLoading = signal(false);
   protected readonly isSignUp = signal(false);
   protected readonly successMessage = signal('');
-  protected readonly currentUser = signal<DemoUser | null>(null);
+  protected readonly showPassword = signal(false);
+  protected readonly pillars = ['AI-Crafted Itineraries', 'Live Trip Tracking & Smart Re-Planning', 'Transparent Budgets'];
 
-  constructor(private readonly databaseService: RealtimeDatabaseService) {}
+  constructor(
+    private readonly databaseService: RealtimeDatabaseService,
+    private readonly userSession: UserSessionService,
+    private readonly router: Router,
+  ) {}
 
   protected async submit(): Promise<void> {
     this.errorMessage.set('');
@@ -28,11 +35,12 @@ export class LoginPage {
     try {
       if (this.isSignUp()) {
         const user = await this.databaseService.registerUser(this.name, this.username, this.password);
-        this.currentUser.set(user);
+        this.userSession.signIn(user);
       } else {
         const user = await this.databaseService.loginUser(this.username, this.password);
-        this.currentUser.set(user);
+        this.userSession.signIn(user);
       }
+      await this.router.navigateByUrl('/');
     } catch (error) {
       this.errorMessage.set(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
     } finally {
@@ -49,9 +57,4 @@ export class LoginPage {
     this.successMessage.set('');
   }
 
-  protected logout(): void {
-    this.currentUser.set(null);
-    this.password = '';
-    this.successMessage.set('');
-  }
 }
