@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,7 @@ from app.firebase_db import (
 )
 
 from app.replan import (
+    STRATEGIES,
     generate_replan_options,
     is_delay_triggered
 )
@@ -202,8 +205,31 @@ def get_trip(
 @app.post("/trips/{trip_id}/replan")
 def replan_trip(
     trip_id: str,
-    force: bool = False
+    force: bool = False,
+    option: Optional[str] = None,
+    refresh: bool = False
 ):
+    """
+    option:  generate only some options, e.g. ?option=1 or ?option=1,3.
+             The UI can call ?option=1, ?option=2 and ?option=3 at the
+             same time and show each one as soon as it arrives.
+    refresh: ignore cached results and generate again.
+    """
+
+    option_ids = None
+
+    if option:
+        option_ids = [o.strip() for o in option.split(",") if o.strip()]
+        unknown = [o for o in option_ids if o not in STRATEGIES]
+
+        if unknown:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unknown option(s) {unknown}. "
+                    f"Valid options: {list(STRATEGIES)}"
+                )
+            )
 
     try:
         trip = get_trip_by_id(trip_id)
@@ -241,7 +267,11 @@ def replan_trip(
         )
 
     try:
-        return generate_replan_options(trip)
+        return generate_replan_options(
+            trip,
+            option_ids=option_ids,
+            refresh=refresh
+        )
 
     except Exception as exc:
         raise HTTPException(

@@ -1,8 +1,12 @@
 import json
 import os
+import re
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from copy import deepcopy
+from typing import Any, Dict, List, Optional, Tuple
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -30,8 +34,30 @@ STRATEGIES = {
 
 NUMBER_OF_ALTERNATIVES = len(STRATEGIES)
 
-LLM_TIMEOUT_SECONDS = int(os.getenv("REPLAN_TIMEOUT_SECONDS", "150"))
-LLM_MAX_TOKENS = int(os.getenv("REPLAN_MAX_TOKENS", "5000"))
+LLM_TIMEOUT_SECONDS = int(os.getenv("REPLAN_TIMEOUT_SECONDS", "120"))
+LLM_MAX_TOKENS = int(os.getenv("REPLAN_MAX_TOKENS", "8000"))
+
+# One automatic retry when a reply is cut off or incomplete.
+MAX_ATTEMPTS = 2
+
+# Optional faster model just for re-planning. Empty = same model as
+# the rest of the app (MODEL in llm.py).
+LLM_MODEL = os.getenv("REPLAN_MODEL") or None
+
+# Hidden "reasoning" tokens are slow and not needed to fill a JSON
+# template. off = disable (fastest), low = a little, default = model's
+# own behaviour. If the model rejects the setting we retry without it.
+REASONING_MODE = os.getenv("REPLAN_REASONING", "off").strip().lower()
+
+# Do not start a retry if the first attempt already took this long.
+RETRY_BUDGET_SECONDS = int(os.getenv("REPLAN_RETRY_BUDGET_SECONDS", "100"))
+
+# Same trip + same tracking state = same answer. Keep it for a while
+# so repeated calls (and demo re-runs) return instantly.
+CACHE_TTL_SECONDS = int(os.getenv("REPLAN_CACHE_SECONDS", "900"))
+
+_cache: Dict[Tuple[str, str, str], Tuple[float, Dict[str, Any]]] = {}
+_cache_lock = threading.Lock()
 
 
 # --------------------------------------------------
@@ -39,7 +65,8 @@ LLM_MAX_TOKENS = int(os.getenv("REPLAN_MAX_TOKENS", "5000"))
 # --------------------------------------------------
 
 REPLAN_PROMPT = """
-You are an enterprise-grade AI travel re-planning engine.
+You are an enterprise-grade AI travel re-planning engine and the
+traveller's personal AI concierge.
 
 A traveller is on a trip that was planned day by day. Live tracking
 shows the traveller has fallen significantly behind schedule.
@@ -55,6 +82,7 @@ Return ONLY valid JSON.
   "optionName": "",
   "strategy": "",
   "description": "",
+  "conciergeSummary": "",
   "impact": {
     "keptPlaces": [],
     "skippedPlaces": [],
@@ -70,23 +98,28 @@ Return ONLY valid JSON.
         {
           "time": "",
           "place": "",
+          "type": "",
           "description": ""
         }
       ],
       "dining": [
         {
-          "meal": "Breakfast | Lunch | Dinner",
+          "meal": "Breakfast | Lunch | High Tea | Dinner",
           "time": "",
-          "place": "",
-          "suggestion": ""
+          "restaurant": "",
+          "cuisine": "",
+          "recommendedDishes": []
         }
       ],
-      "stay": {
-        "hotel": "",
+      "accommodation": {
+        "name": "",
+        "category": "",
         "checkIn": "",
         "checkOut": "",
         "note": ""
-      }
+      },
+      "conciergeNote": "",
+      "precautions": []
     }
   ]
 }
@@ -102,27 +135,44 @@ RULES:
    return journey included.
 6. Do not invent confirmed bookings or ticket availability.
 7. Do not add places far from the destination.
-8. Every day needs a theme, a one-sentence daySummary, at
-   least 3 activities, a dining list and a stay entry.
+8. Every day needs a theme, a one-sentence daySummary and at
+   least 3 activities.
 9. Keep every activity description to ONE short sentence.
 10. keptPlaces and skippedPlaces are arrays of place names compared
     with the remaining original itinerary.
 11. Be concise. Do not repeat information.
-12. DINING: every day must list the meals that still fall after
-    the estimated start time (breakfast, lunch, dinner). Reuse the
-    eateries and food style from the original itinerary where they
-    still fit, keep the budget level of the original plan, and
-    never schedule a meal at an impossible time (for example dinner
-    before 6 PM or a meal while the traveller is in transit with no
-    stop).
-13. STAY: every day must have a stay entry. Keep the SAME hotel as
-    the original itinerary. For the current day say when the
-    traveller can realistically check in or continue the stay, and
-    on the last day give the checkout time. If the delay causes a
-    late check-in, an extra night, or a missed checkout, say so in
-    stay.note. Do not claim a booking is confirmed.
-14. Meals and hotel check-in/check-out must also stay consistent
-    with the activities timeline (no overlaps).
+12. activities.type is one of: TRANSFER, SIGHTSEEING, ACTIVITY,
+    LEISURE, SHOPPING, CHECKIN, CHECKOUT, EXPERIENCE, WELLNESS.
+    Put meals ONLY in "dining", never in "activities" (the server
+    merges dining into the timeline).
+13. DINING: every day lists the meals that still fall after the
+    estimated start time. Follow the food style, budget level and
+    diet visible in the original itinerary and traveller profile
+    (for example vegetarian). Meal times must be realistic and must
+    not overlap activities. Use a real kind of place (hotel
+    restaurant, local eatery, etc.), never a made-up brand.
+    recommendedDishes has 1-2 items.
+14. STAY: every day has an "accommodation" entry using the SAME
+    hotel as the original itinerary (name and category). Say when
+    the traveller can check in (or that they are already checked
+    in) and the checkout time on the last day. If the delay causes
+    a late check-in, extra night or missed checkout, explain it in
+    accommodation.note. Do not claim a booking is confirmed.
+15. AI CONCIERGE: "conciergeSummary" is 2-3 friendly sentences that
+    say what happened (the delay), what this option does, and the
+    first thing the traveller should do now. "conciergeNote" (per
+    day) is one practical tip, such as calling the hotel about a
+    late check-in, reconfirming a bus or cab, or booking a slot.
+    "precautions" has 2-3 short safety or practical items.
+16. CONSISTENCY: every time mentioned in notes, summaries or
+    returnTimeChange must match the activity and accommodation
+    times. Keep the original return transport departure time
+    unless this strategy says to shift it; if you change it, say
+    so. Keep trip durations realistic.
+17. Use the SAME time format as the original itinerary (the user
+    message says which).
+18. Be brief: descriptions under 15 words, no more than 5
+    activities per day.
 
 JSON RULES:
 
@@ -133,7 +183,7 @@ JSON RULES:
 
 
 # --------------------------------------------------
-# HELPERS
+# TIME HELPERS
 # --------------------------------------------------
 
 def _format_ms(epoch_ms: Optional[int]) -> Optional[str]:
@@ -147,34 +197,78 @@ def _format_ms(epoch_ms: Optional[int]) -> Optional[str]:
     ).strftime("%d %b %Y, %I:%M %p IST")
 
 
-def _shift_time(time_str: str, hours: float) -> Optional[str]:
-    """'06:00 AM' + 9h -> '03:00 PM'; adds '(+1 day)' if it wraps."""
+def _parse_clock(
+    time_str: Any
+) -> Optional[Tuple[datetime, str]]:
+    """
+    Understands "09:00" (24-hour) and "09:00 AM" (12-hour).
+    Returns (datetime, style) or None.
+    """
 
-    try:
-        base = datetime.strptime(time_str.strip(), "%I:%M %p")
-    except (ValueError, AttributeError):
+    if not isinstance(time_str, str):
         return None
 
+    text = time_str.strip().upper()
+
+    for fmt, style in (("%H:%M", "24h"), ("%I:%M %p", "12h")):
+        try:
+            return datetime.strptime(text, fmt), style
+        except ValueError:
+            continue
+
+    return None
+
+
+def _to_minutes(time_str: Any) -> Optional[int]:
+
+    parsed = _parse_clock(time_str)
+
+    if not parsed:
+        return None
+
+    return parsed[0].hour * 60 + parsed[0].minute
+
+
+def _shift_time(time_str: str, hours: float) -> Optional[str]:
+    """
+    '09:00' + 5h -> '14:00'   (same style as the input)
+    '06:00 AM' + 9h -> '03:00 PM'
+    Adds ' (+1 day)' when the result passes midnight.
+    """
+
+    parsed = _parse_clock(time_str)
+
+    if not parsed:
+        return None
+
+    base, style = parsed
     shifted = base + timedelta(hours=hours)
     days_later = (shifted.date() - base.date()).days
-    label = shifted.strftime("%I:%M %p")
+
+    label = shifted.strftime(
+        "%H:%M" if style == "24h" else "%I:%M %p"
+    )
 
     return f"{label} (+{days_later} day)" if days_later else label
 
 
-def _find_hotel(days: List[Dict[str, Any]]) -> Optional[str]:
-    """First place in the original plan that looks like a stay."""
+def _time_style(time_str: Any) -> str:
 
-    keywords = ("hotel", "resort", "stay", "lodge", "guest house", "homestay")
+    parsed = _parse_clock(time_str)
 
-    for day in days:
-        for a in day.get("activities") or []:
-            place = a.get("place") or ""
-            if any(k in place.lower() for k in keywords):
-                return place
+    if not parsed:
+        return "same format as the original itinerary"
 
-    return None
+    return (
+        "24-hour HH:MM (for example 14:30)"
+        if parsed[1] == "24h"
+        else "12-hour with AM/PM (for example 02:30 PM)"
+    )
 
+
+# --------------------------------------------------
+# TRIP / CONTEXT HELPERS
+# --------------------------------------------------
 
 def is_delay_triggered(trip: Dict[str, Any]) -> bool:
 
@@ -187,6 +281,73 @@ def is_delay_triggered(trip: Dict[str, Any]) -> bool:
     threshold = tracking.get("delayThresholdHrs") or 5
 
     return drift >= threshold
+
+
+def _find_hotel(days: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Hotel of the original plan. Prefers the structured
+    day.accommodation; falls back to a place that looks like a stay.
+    """
+
+    for day in days:
+        acc = day.get("accommodation")
+
+        if isinstance(acc, dict) and acc.get("name"):
+            return {
+                "name": acc.get("name"),
+                "category": acc.get("category")
+            }
+
+    keywords = (
+        "hotel", "resort", "stay", "lodge", "guest house", "homestay"
+    )
+
+    for day in days:
+        for a in day.get("activities") or []:
+            place = a.get("place") or ""
+
+            if any(k in place.lower() for k in keywords):
+                return {"name": place, "category": None}
+
+    return None
+
+
+PROFILE_KEYS = {
+    "travellerCount": ("travellerCount", "travelerCount"),
+    "travellerType": ("travellerType",),
+    "mealPreference": ("mealPreference",),
+    "budget": ("budget", "totalBudget"),
+    "hotelPreference": ("hotelPreference",),
+    "badges": ("badges",),
+}
+
+
+def _traveller_profile(trip: Dict[str, Any]) -> Dict[str, Any]:
+    """Whatever traveller info the stored trip happens to carry."""
+
+    sources = [
+        trip,
+        trip.get("tripDetails"),
+        trip.get("overview")
+    ]
+
+    profile = {}
+
+    for out_key, candidates in PROFILE_KEYS.items():
+        for src in sources:
+            if not isinstance(src, dict):
+                continue
+
+            value = next(
+                (src[k] for k in candidates if src.get(k)),
+                None
+            )
+
+            if value:
+                profile[out_key] = value
+                break
+
+    return profile
 
 
 def _remaining_itinerary(
@@ -261,7 +422,7 @@ def build_replan_context(trip: Dict[str, Any]) -> Dict[str, Any]:
         if s.get("status") == "visited" and s.get("delayHrs", 0) > 0
     ]
 
-    return {
+    context = {
         "tripId": trip.get("tripId"),
         "delay": {
             "totalDelayHrs": drift,
@@ -277,6 +438,7 @@ def build_replan_context(trip: Dict[str, Any]) -> Dict[str, Any]:
             "originallyPlannedTime": planned_time,
             "estimatedActualTime": estimated_time
         },
+        "timeFormat": _time_style(planned_time),
         "delayedCheckpointsSoFar": visited,
         "originalHotel": _find_hotel(days),
         "remainingOriginalItinerary": _remaining_itinerary(
@@ -284,15 +446,28 @@ def build_replan_context(trip: Dict[str, Any]) -> Dict[str, Any]:
         )
     }
 
+    profile = _traveller_profile(trip)
+
+    if profile:
+        context["travellerProfile"] = profile
+
+    return context
+
 
 def build_replan_user_prompt(
     context: Dict[str, Any],
-    option_id: str
+    option_id: str,
+    retry_note: str = ""
 ) -> str:
 
     delay = context["delay"]
     cp = context["currentCheckpoint"]
     name, guidance = STRATEGIES[option_id]
+
+    estimated = (
+        cp["estimatedActualTime"]
+        or "not available - add the delay to the planned time"
+    )
 
     return f"""
 CONTEXT:
@@ -304,7 +479,9 @@ The traveller has MISSED the planned schedule and is running
 The traveller is currently at checkpoint "{cp["name"]}"
 on Day {cp["dayNumber"]}.
 Originally planned time: {cp["originallyPlannedTime"]}.
-Estimated actual time now: {cp["estimatedActualTime"]}.
+Estimated actual time now: {estimated}.
+
+Time format to use in your reply: {context["timeFormat"]}.
 
 STRATEGY FOR THIS OPTION:
 
@@ -315,75 +492,466 @@ optionName: "{name}"
 TRIP AND TRACKING DETAILS (JSON):
 
 {json.dumps(context, ensure_ascii=False)}
-"""
+{retry_note}"""
 
 
 # --------------------------------------------------
-# LLM CALL (own timeout + smaller output budget)
+# PARSING AND NORMALISING THE LLM REPLY
 # --------------------------------------------------
+
+def _parse_option(content: Optional[str]) -> Dict[str, Any]:
+    """
+    Strict parser. Only accepts a JSON object that has "days".
+
+    The shared parser in llm.py falls back to the first complete
+    {...} it can find. When a reply is cut off by the token limit,
+    that first complete object is the small "impact" block, which
+    is how options used to come back with no days, dining or stay.
+    """
+
+    if not content:
+        raise ValueError("AI model returned an empty response")
+
+    text = content.strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+
+    decoder = json.JSONDecoder()
+
+    for match in re.finditer(r"\{", text):
+        try:
+            obj, _ = decoder.raw_decode(text[match.start():])
+        except json.JSONDecodeError:
+            continue
+
+        if isinstance(obj, dict) and "days" in obj:
+            return obj
+
+    raise ValueError(
+        "AI reply was cut off or was not a complete itinerary"
+    )
+
+
+def _merge_dining(day: Dict[str, Any]) -> None:
+    """
+    Put dining entries into the activity timeline (type DINING) so
+    the UI timeline stays complete, without asking the LLM to write
+    every meal twice.
+    """
+
+    activities = day.get("activities")
+    dining = day.get("dining")
+
+    if not isinstance(activities, list) or not isinstance(dining, list):
+        return
+
+    if any(
+        str(a.get("type", "")).upper() == "DINING"
+        for a in activities
+        if isinstance(a, dict)
+    ):
+        return  # the model already put meals in the timeline
+
+    def absolute_minutes() -> List[int]:
+        """Minutes per activity; a big backwards jump = next day."""
+
+        result, last, offset = [], None, 0
+
+        for a in activities:
+            m = _to_minutes(a.get("time")) if isinstance(a, dict) else None
+
+            if m is None:
+                result.append(last if last is not None else 0)
+                continue
+
+            current = m + offset
+
+            if last is not None and current < last - 120:
+                offset += 1440
+                current = m + offset
+
+            last = current
+            result.append(current)
+
+        return result
+
+    items = []
+
+    for d in dining:
+        if not isinstance(d, dict):
+            continue
+
+        dishes = d.get("recommendedDishes") or []
+        dish_text = ", ".join(str(x) for x in dishes)
+        meal = d.get("meal") or "Meal"
+
+        items.append({
+            "time": d.get("time"),
+            "place": d.get("restaurant") or d.get("place"),
+            "type": "DINING",
+            "description": (
+                f"{meal}: {dish_text}" if dish_text else meal
+            )
+        })
+
+    for item in items:
+        m = _to_minutes(item["time"])
+
+        if m is None:
+            activities.append(item)
+            continue
+
+        positions = absolute_minutes()
+        index = next(
+            (i for i, p in enumerate(positions) if p > m),
+            len(activities)
+        )
+        activities.insert(index, item)
+
+
+def _normalize_option(
+    option: Dict[str, Any],
+    option_id: str
+) -> Dict[str, Any]:
+
+    # impact block: move loose fields into it if the model flattened it
+    impact = option.get("impact")
+
+    if not isinstance(impact, dict):
+        impact = {}
+
+    for key in (
+        "keptPlaces", "skippedPlaces", "returnTimeChange", "tradeOffs"
+    ):
+        if key in option:
+            impact.setdefault(key, option.pop(key))
+
+    option["impact"] = impact
+    option["optionId"] = option_id
+    option.setdefault("optionName", STRATEGIES[option_id][0])
+    option.setdefault("strategy", STRATEGIES[option_id][0])
+
+    for day in option.get("days") or []:
+
+        if not isinstance(day, dict):
+            continue
+
+        # older shape: "stay" -> "accommodation"
+        stay = day.pop("stay", None)
+
+        if isinstance(stay, dict) and not day.get("accommodation"):
+            day["accommodation"] = {
+                "name": stay.get("hotel"),
+                "category": stay.get("category"),
+                "checkIn": stay.get("checkIn"),
+                "checkOut": stay.get("checkOut"),
+                "note": stay.get("note")
+            }
+
+        # older dining shape: place/suggestion -> restaurant/dishes
+        for d in day.get("dining") or []:
+
+            if not isinstance(d, dict):
+                continue
+
+            if "place" in d and "restaurant" not in d:
+                d["restaurant"] = d.pop("place")
+
+            if "suggestion" in d and "recommendedDishes" not in d:
+                d["recommendedDishes"] = [d.pop("suggestion")]
+
+        day.setdefault("dining", [])
+        day.setdefault("precautions", [])
+
+        _merge_dining(day)
+
+    return option
+
+
+def _problems(option: Dict[str, Any]) -> List[str]:
+    """Names of required parts that are missing from an option."""
+
+    days = option.get("days")
+
+    if not isinstance(days, list) or not days:
+        return ["days"]
+
+    problems = set()
+
+    if not option.get("conciergeSummary"):
+        problems.add("conciergeSummary")
+
+    for day in days:
+
+        if not isinstance(day, dict):
+            problems.add("days")
+            continue
+
+        if not day.get("activities"):
+            problems.add("activities")
+
+        if not day.get("dining"):
+            problems.add("dining")
+
+        acc = day.get("accommodation")
+
+        if not isinstance(acc, dict) or not acc.get("name"):
+            problems.add("accommodation")
+
+        if not day.get("conciergeNote"):
+            problems.add("conciergeNote")
+
+    return sorted(problems)
+
+
+# --------------------------------------------------
+# LLM CALL (own timeout + token budget, one retry)
+# --------------------------------------------------
+
+def _call_llm(
+    context: Dict[str, Any],
+    option_id: str,
+    max_tokens: int,
+    retry_note: str
+) -> Tuple[Optional[str], bool]:
+
+    from app.llm import client, MODEL
+
+    kwargs = dict(
+        model=LLM_MODEL or MODEL,
+        temperature=0.2,
+        max_tokens=max_tokens,
+        messages=[
+            {"role": "system", "content": REPLAN_PROMPT},
+            {
+                "role": "user",
+                "content": build_replan_user_prompt(
+                    context, option_id, retry_note
+                )
+            }
+        ]
+    )
+
+    reasoning = {
+        "off": {"enabled": False},
+        "low": {"effort": "low"}
+    }.get(REASONING_MODE)
+
+    api = client.with_options(
+        timeout=LLM_TIMEOUT_SECONDS,
+        max_retries=0
+    ).chat.completions
+
+    try:
+        if reasoning:
+            response = api.create(
+                **kwargs, extra_body={"reasoning": reasoning}
+            )
+        else:
+            response = api.create(**kwargs)
+
+    except Exception as exc:
+        # some models reject the reasoning setting: retry without it
+        if reasoning and getattr(exc, "status_code", None) in (400, 422):
+            response = api.create(**kwargs)
+        else:
+            raise
+
+    choice = response.choices[0]
+
+    return (
+        choice.message.content,
+        getattr(choice, "finish_reason", None) == "length"
+    )
+
 
 def _generate_one(
     context: Dict[str, Any],
     option_id: str
 ) -> Dict[str, Any]:
 
-    from app.llm import client, MODEL, parse_json_response
+    best: Optional[Dict[str, Any]] = None
+    best_problems: List[str] = []
+    last_error = "unknown error"
+    retry_note = ""
+    started = time.monotonic()
 
-    response = client.with_options(
-        timeout=LLM_TIMEOUT_SECONDS,
-        max_retries=0
-    ).chat.completions.create(
-        model=MODEL,
-        temperature=0.2,
-        max_tokens=LLM_MAX_TOKENS,
-        messages=[
-            {"role": "system", "content": REPLAN_PROMPT},
-            {
-                "role": "user",
-                "content": build_replan_user_prompt(
-                    context, option_id
-                )
-            }
-        ]
+    for attempt in range(MAX_ATTEMPTS):
+
+        # a slow first attempt means a retry would be slow too
+        if attempt > 0 and (
+            time.monotonic() - started > RETRY_BUDGET_SECONDS
+        ):
+            break
+
+        max_tokens = (
+            LLM_MAX_TOKENS if attempt == 0 else int(LLM_MAX_TOKENS * 1.5)
+        )
+
+        try:
+            content, truncated = _call_llm(
+                context, option_id, max_tokens, retry_note
+            )
+            option = _normalize_option(
+                _parse_option(content), option_id
+            )
+
+        except Exception as exc:
+            last_error = str(exc)[:300]
+            retry_note = (
+                "\nYour previous reply was cut off or was not valid "
+                "JSON. Reply again with the COMPLETE JSON object. Be "
+                "shorter: descriptions under 12 words and at most 5 "
+                "activities per day.\n"
+            )
+            continue
+
+        problems = _problems(option)
+
+        if not problems:
+            return option
+
+        if best is None or len(problems) < len(best_problems):
+            best, best_problems = option, problems
+
+        retry_note = (
+            "\nYour previous reply was missing: "
+            + ", ".join(problems)
+            + ". Reply again with the COMPLETE JSON object including "
+              "these for every day. Keep descriptions short.\n"
+        )
+
+    if best is not None and best.get("days"):
+        best["warnings"] = [f"missing: {p}" for p in best_problems]
+        return best
+
+    raise ValueError(last_error)
+
+
+# --------------------------------------------------
+# CACHE
+# --------------------------------------------------
+
+def _cache_signature(trip: Dict[str, Any]) -> str:
+    """Changes whenever the tracking state changes."""
+
+    tracking = trip.get("tracking") or {}
+
+    return json.dumps(
+        [
+            tracking.get("driftHrs"),
+            tracking.get("currentCheckpointIndex"),
+            (tracking.get("lastEvent") or {}).get("id")
+        ],
+        default=str
     )
 
-    option = parse_json_response(
-        response.choices[0].message.content
-    )
 
-    option["optionId"] = option_id
-    option.setdefault("optionName", STRATEGIES[option_id][0])
+def _cache_get(key: Tuple[str, str, str]) -> Optional[Dict[str, Any]]:
 
-    return option
+    with _cache_lock:
+        entry = _cache.get(key)
+
+        if not entry:
+            return None
+
+        stored_at, value = entry
+
+        if time.time() - stored_at > CACHE_TTL_SECONDS:
+            _cache.pop(key, None)
+            return None
+
+        return deepcopy(value)
+
+
+def _cache_put(key: Tuple[str, str, str], value: Dict[str, Any]) -> None:
+
+    if CACHE_TTL_SECONDS <= 0:
+        return
+
+    with _cache_lock:
+        if len(_cache) > 200:
+            now = time.time()
+
+            for k in [
+                k for k, (t, _) in _cache.items()
+                if now - t > CACHE_TTL_SECONDS
+            ]:
+                _cache.pop(k, None)
+
+        _cache[key] = (time.time(), deepcopy(value))
 
 
 # --------------------------------------------------
 # PUBLIC FUNCTION
 # --------------------------------------------------
 
-def generate_replan_options(trip: Dict[str, Any]) -> Dict[str, Any]:
+def _timed_generate(
+    context: Dict[str, Any],
+    option_id: str
+) -> Dict[str, Any]:
 
+    started = time.monotonic()
+    option = _generate_one(context, option_id)
+    option["generationMs"] = int((time.monotonic() - started) * 1000)
+
+    return option
+
+
+def generate_replan_options(
+    trip: Dict[str, Any],
+    option_ids: Optional[List[str]] = None,
+    refresh: bool = False
+) -> Dict[str, Any]:
+    """
+    option_ids: generate only these options (for example ["1"]).
+                None = all of them.
+    refresh:    skip the cache and generate again.
+    """
+
+    started = time.monotonic()
     context = build_replan_context(trip)
-    option_ids = list(STRATEGIES.keys())
+    wanted = option_ids or list(STRATEGIES.keys())
+
+    trip_id = str(trip.get("tripId"))
+    signature = _cache_signature(trip)
 
     alternatives = []
     errors = []
+    cached_ids = []
+    to_generate = []
 
-    with ThreadPoolExecutor(max_workers=len(option_ids)) as pool:
-        futures = {
-            oid: pool.submit(_generate_one, context, oid)
-            for oid in option_ids
-        }
+    for oid in wanted:
+        hit = None if refresh else _cache_get((trip_id, oid, signature))
 
-        for oid, future in futures.items():
-            try:
-                alternatives.append(future.result())
-            except Exception as exc:
-                errors.append({
-                    "optionId": oid,
-                    "optionName": STRATEGIES[oid][0],
-                    "error": str(exc)[:300]
-                })
+        if hit:
+            hit["cached"] = True
+            alternatives.append(hit)
+            cached_ids.append(oid)
+        else:
+            to_generate.append(oid)
+
+    if to_generate:
+        with ThreadPoolExecutor(max_workers=len(to_generate)) as pool:
+            futures = {
+                oid: pool.submit(_timed_generate, context, oid)
+                for oid in to_generate
+            }
+
+            for oid, future in futures.items():
+                try:
+                    option = future.result()
+                    alternatives.append(option)
+
+                    if not option.get("warnings"):
+                        _cache_put((trip_id, oid, signature), option)
+
+                except Exception as exc:
+                    errors.append({
+                        "optionId": oid,
+                        "optionName": STRATEGIES[oid][0],
+                        "error": str(exc)[:300]
+                    })
 
     if not alternatives:
         raise ValueError(
@@ -391,12 +959,18 @@ def generate_replan_options(trip: Dict[str, Any]) -> Dict[str, Any]:
             + "; ".join(e["error"] for e in errors)
         )
 
+    alternatives.sort(key=lambda a: a.get("optionId", ""))
+
     result = {
         "tripId": trip.get("tripId"),
         "userId": trip.get("userId"),
         "delay": context["delay"],
         "currentCheckpoint": context["currentCheckpoint"],
-        "alternatives": alternatives
+        "alternatives": alternatives,
+        "meta": {
+            "elapsedMs": int((time.monotonic() - started) * 1000),
+            "cachedOptions": cached_ids
+        }
     }
 
     if errors:
