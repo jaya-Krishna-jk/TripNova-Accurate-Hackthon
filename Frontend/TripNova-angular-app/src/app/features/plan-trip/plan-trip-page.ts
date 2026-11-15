@@ -19,6 +19,7 @@ import { TripStateService } from '../../core/services/trip-state.service';
 import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
 import { RealtimeDatabaseService } from '../../realtime-database.service';
 import { UserSessionService } from '../../user-session.service';
+import { downloadTextFile } from '../../core/utils/download-file';
 
 interface QuickPrompt {
   label: string;
@@ -538,6 +539,34 @@ export class PlanTripPage implements OnInit, OnDestroy {
             : 'unknown',
       },
     };
+  }
+
+  protected downloadItinerary(): void {
+    const state = this.travelerTripState();
+    if (state.kind !== 'live') return;
+
+    const { trip } = state;
+    const lines = [
+      'TripNova confirmed trip itinerary',
+      `Trip ID: ${trip.tripId}`,
+      `Status: ${trip.statusLabel}`,
+      '',
+      'JOURNEY SUMMARY',
+      trip.dayPositionLabel,
+      trip.overallPositionLabel,
+      `Total activities: ${trip.totalActivities}`,
+      '',
+    ];
+
+    for (const day of trip.days) {
+      lines.push(`${day.heading}${day.theme ? `: ${day.theme}` : ''}`);
+      for (const activity of day.activities) {
+        lines.push(`- ${activity.time} | ${activity.place} | ${activity.type}: ${activity.description}`);
+      }
+      lines.push('');
+    }
+
+    downloadTextFile(`tripnova-${trip.tripId}-itinerary.txt`, lines.join('\n'));
   }
 
   private notProvidedUnlessString(value: unknown): string {

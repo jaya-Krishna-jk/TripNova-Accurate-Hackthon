@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ItineraryDay, LooseValue } from '../../core/models/travel.models';
 import { BookingDialog } from './booking-dialog';
+import { downloadTextFile } from '../../core/utils/download-file';
 
 interface BudgetSegment {
   name: string;
@@ -102,6 +103,73 @@ export class ItineraryDetailsPage implements OnInit {
 
   protected completeBooking(): void {
     this.router.navigate(['/']);
+  }
+
+  protected downloadItinerary(): void {
+    if (!this.details) return;
+
+    const lines = [
+      this.details.planName || this.plan?.planName || 'TripNova itinerary',
+      `${this.details.overview.source} to ${this.details.overview.destination}`,
+      `${this.durationDays} days / ${this.nights} nights`,
+      '',
+    ];
+
+    if (this.tripDetails) {
+      lines.push(
+        `Travel dates: ${this.tripDetails.startDate} to ${this.tripDetails.endDate}`,
+        `Travellers: ${this.tripDetails.travellerCount}`,
+        '',
+      );
+    }
+
+    if (this.details.routeOverview) {
+      lines.push('ROUTE OVERVIEW');
+      if (this.details.routeOverview.stops.length) {
+        lines.push(`Stops: ${this.details.routeOverview.stops.map((stop) => this.stopLabel(stop)).join(' -> ')}`);
+      }
+      if (this.details.routeOverview.description) lines.push(this.details.routeOverview.description);
+      if (this.text(this.details.routeOverview.estimatedDuration)) {
+        lines.push(`Estimated duration: ${this.text(this.details.routeOverview.estimatedDuration)}`);
+      }
+      lines.push('');
+    }
+
+    for (const day of this.days) {
+      lines.push(`DAY ${day.day}: ${day.theme}`);
+      if (day.daySummary) lines.push(day.daySummary);
+      if (day.activities.length) {
+        lines.push('Activities:');
+        for (const activity of day.activities) {
+          lines.push(`- ${activity.time} | ${activity.place} | ${activity.type}: ${activity.description}`);
+        }
+      }
+      if (day.transport) {
+        lines.push(`Transport: ${day.transport.mode} - ${day.transport.description}`);
+      }
+      for (const meal of day.dining) {
+        lines.push(`Dining (${meal.meal}): ${meal.restaurant}${meal.cuisine ? ` - ${meal.cuisine}` : ''}`);
+      }
+      if (day.accommodation?.name || day.accommodation?.category) {
+        lines.push(`Stay: ${day.accommodation.name || day.accommodation.category}`);
+      }
+      for (const precaution of day.precautions) lines.push(`Precaution: ${precaution}`);
+      if (day.conciergeNote) lines.push(`Concierge note: ${day.conciergeNote}`);
+      lines.push('');
+    }
+
+    if (this.details.travelTips.length) {
+      lines.push('TRAVEL TIPS');
+      for (const tip of this.details.travelTips) {
+        lines.push(`- ${tip.title || tip.category}: ${tip.description}`);
+      }
+      lines.push('');
+    }
+
+    downloadTextFile(
+      `${this.details.planName || 'tripnova-itinerary'}.txt`.replace(/[^\w.-]+/g, '-'),
+      lines.join('\n'),
+    );
   }
 
   /** Formats an AI-supplied amount: numbers as INR, strings as-is, empty when unknown. */
