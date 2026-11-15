@@ -27,6 +27,17 @@ export const routes: Routes = [
         title: 'TripNova | Detailed Itinerary',
         loadComponent: () => import('./features/itinerary-details/itinerary-details-page').then((m) => m.ItineraryDetailsPage),
       },
+      // Re-itinerary (delay) flow: separate pages and state from the new-plan flow above.
+      {
+        path: 'replan-suggestions',
+        title: 'TripNova | Re-plan Recommendations',
+        loadComponent: () => import('./features/replan-suggestions/replan-suggestions-page').then((m) => m.ReplanSuggestionsPage),
+      },
+      {
+        path: 'replan-details',
+        title: 'TripNova | Re-planned Itinerary',
+        loadComponent: () => import('./features/replan-details/replan-details-page').then((m) => m.ReplanDetailsPage),
+      },
     ],
   },
   {

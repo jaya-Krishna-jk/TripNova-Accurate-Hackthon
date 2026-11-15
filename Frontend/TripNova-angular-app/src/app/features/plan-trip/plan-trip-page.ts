@@ -12,7 +12,8 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
+import { ReplanService } from '../../core/services/replan.service';
 import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
@@ -42,6 +43,8 @@ interface TripActivityView {
   place: string;
   description: string;
   type: string;
+  icon: string;
+  status: 'done' | 'current' | 'upcoming';
   isSelected: boolean;
 }
 
@@ -50,6 +53,8 @@ interface TripDayView {
   heading: string;
   theme?: string;
   isSelected: boolean;
+  status: 'completed' | 'current' | 'upcoming';
+  doneCount: number;
   activities: TripActivityView[];
 }
 
@@ -59,6 +64,10 @@ interface TravelerTripView {
   dayPositionLabel: string;
   activityPositionLabel: string;
   overallPositionLabel: string;
+  currentDayTheme?: string;
+  dayPercent: number;
+  overallPercent: number;
+  completedCount: number;
   railAccessibleLabel: string;
   railPositionPercent: number;
   totalActivities: number;
@@ -96,6 +105,8 @@ export class PlanTripPage implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly database = inject(RealtimeDatabaseService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly replan = inject(ReplanService);
+  private replanSubscription: Subscription | undefined;
   @ViewChild('delayDialog') private delayDialog?: ElementRef<HTMLDialogElement>;
   private stopTripListener: (() => void) | undefined;
   private destroyed = false;
@@ -145,6 +156,9 @@ export class PlanTripPage implements OnInit, OnDestroy {
 
   protected readonly travelerTripState = signal<TravelerTripState>({ kind: 'loading' });
   protected readonly delayAlertMessage = signal('');
+  /** Re-itinerary request started from the delay dialog. */
+  protected readonly replanLoading = signal(false);
+  protected readonly replanError = signal('');
   protected readonly isLoading = computed(() => this.status() === 'loading');
   protected readonly canSubmit = computed(() => !this.isLoading() && this.prompt.trim().length > 0);
 
@@ -187,6 +201,7 @@ export class PlanTripPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.cancelReplanRequest();
     this.resetDelayAlert();
     this.stopTripListener?.();
     this.stopTripListener = undefined;
@@ -242,7 +257,41 @@ export class PlanTripPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Delay dialog CTA: fetches the re-itinerary options for the live trip and
+   * opens the replan suggestions page. Uses ReplanService state only, so the
+   * new-plan flow (TripStateService) is untouched.
+   */
+  protected viewRecommendations(): void {
+    if (this.replanLoading()) {
+      return;
+    }
+    this.replanLoading.set(true);
+    this.replanError.set('');
+    this.replanSubscription = this.replan.requestOptions(TRIP_ID).subscribe({
+      next: (response) => {
+        this.replanLoading.set(false);
+        this.replan.response.set(response);
+        this.replan.selectedOption.set(null);
+        this.router.navigate(['/replan-suggestions']);
+      },
+      error: (error: unknown) => {
+        this.replanLoading.set(false);
+        this.replanError.set(this.replan.getErrorMessage(error));
+      },
+    });
+  }
+
+  /** Drops an in-flight replan request, e.g. when the dialog is closed. */
+  private cancelReplanRequest(): void {
+    this.replanSubscription?.unsubscribe();
+    this.replanSubscription = undefined;
+    this.replanLoading.set(false);
+    this.replanError.set('');
+  }
+
   protected onDelayDialogClosed(): void {
+    this.cancelReplanRequest();
     const previousElement = this.previouslyFocusedElement;
     this.previouslyFocusedElement = null;
     if (previousElement?.isConnected) {
@@ -371,6 +420,12 @@ export class PlanTripPage implements OnInit, OnDestroy {
           type: rawType == null
             ? NOT_PROVIDED
             : this.activityTypeLabel(rawType),
+          icon: this.activityTypeIcon(rawType),
+          status: preview || overallIndex > selectedIndex
+            ? 'upcoming'
+            : overallIndex === selectedIndex
+              ? 'current'
+              : 'done',
           isSelected: overallIndex === selectedIndex,
         };
         dayActivities.push(activity);
@@ -383,11 +438,20 @@ export class PlanTripPage implements OnInit, OnDestroy {
 
       const storedDay = rawDay['day'];
       const theme = this.notProvidedUnlessString(rawDay['theme']);
+      const dayIsSelected = selectedIndex >= dayStartIndex && selectedIndex < overallIndex;
       days.push({
         ordinal: dayIndex + 1,
         heading: `Day ${typeof storedDay === 'number' ? storedDay : dayIndex + 1}`,
         ...(theme !== NOT_PROVIDED ? { theme } : {}),
-        isSelected: selectedIndex >= dayStartIndex && selectedIndex < overallIndex,
+        isSelected: dayIsSelected,
+        status: preview
+          ? 'upcoming'
+          : dayIsSelected
+            ? 'current'
+            : overallIndex <= selectedIndex
+              ? 'completed'
+              : 'upcoming',
+        doneCount: dayActivities.filter((activity) => activity.status === 'done').length,
         activities: dayActivities,
       });
     }
@@ -427,6 +491,10 @@ export class PlanTripPage implements OnInit, OnDestroy {
         dayPositionLabel,
         activityPositionLabel,
         overallPositionLabel,
+        ...(currentDay.theme ? { currentDayTheme: currentDay.theme } : {}),
+        dayPercent: Math.round((currentDay.ordinal / days.length) * 100),
+        overallPercent: Math.round(((selectedIndex + 1) / activities.length) * 100),
+        completedCount: preview ? 0 : selectedIndex,
         railAccessibleLabel,
         railPositionPercent: activities.length > 1
           ? (selectedIndex / (activities.length - 1)) * 100
@@ -462,6 +530,19 @@ export class PlanTripPage implements OnInit, OnDestroy {
         return 'hotel';
       default:
         return type;
+    }
+  }
+
+  private activityTypeIcon(type: string | null | undefined): string {
+    switch (type) {
+      case 'Transport':
+        return 'directions_bus';
+      case 'Meal':
+        return 'restaurant';
+      case 'Accommodation':
+        return 'hotel';
+      default:
+        return 'location_on';
     }
   }
 

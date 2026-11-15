@@ -350,6 +350,144 @@ export function applyTripTrackingAction(
   };
 }
 
+/** A re-planned day as returned by the replan API; extra detail fields are kept as-is. */
+export interface ReplanDayInput {
+  [key: string]: unknown;
+  day: number;
+  activities?: unknown[];
+}
+
+export interface ReplanApplication {
+  optionId: string;
+  optionName: string;
+  /** Checkpoint the options were generated for; the update is rejected if the trip has moved on. */
+  expectedCheckpointName: string | null;
+  expectedDayNumber: number | null;
+  days: ReplanDayInput[];
+}
+
+export type ReplanApplyResult =
+  | { kind: 'applied'; trip: TripRecord }
+  | { kind: 'stale' }
+  | { kind: 'not-found' };
+
+function toTripActivity(value: unknown): Record<string, unknown> {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const asText = (field: unknown): string => (field === null || field === undefined ? '' : String(field));
+  return {
+    ...source,
+    time: asText(source['time']),
+    place: asText(source['place']),
+    description: asText(source['description']),
+    ...(source['type'] === null || source['type'] === undefined ? {} : { type: asText(source['type']) }),
+  };
+}
+
+/**
+ * Replaces the not-yet-reached part of a tracked trip with a re-itinerary option.
+ * Everything up to and including the current checkpoint is preserved, so the
+ * tracking cursor and visited history stay valid. The accumulated delay is
+ * cleared because the new schedule already starts from the traveller's actual time.
+ * Returns `undefined` when the option no longer matches the trip.
+ */
+export function applyReplanToTrip(
+  record: TripRecord | null,
+  application: ReplanApplication,
+  appliedAt: number | object,
+): TripRecord | undefined {
+  const tracking = record?.tracking;
+  if (!record || !Array.isArray(record.days) || !tracking || tracking.status !== 'in_progress') {
+    return undefined;
+  }
+
+  const checkpoints = getTripCheckpoints(record);
+  const currentIndex = tracking.currentCheckpointIndex;
+  const current = checkpoints[currentIndex];
+  if (!current) {
+    return undefined;
+  }
+  if (
+    (application.expectedCheckpointName !== null && application.expectedCheckpointName !== current.checkpointName) ||
+    (application.expectedDayNumber !== null && application.expectedDayNumber !== current.dayNumber)
+  ) {
+    return undefined;
+  }
+
+  const newDays = application.days
+    .filter((day) => Number.isInteger(day.day) && day.day >= current.dayNumber && Array.isArray(day.activities))
+    // The home page only accepts a string theme, so drop anything else the model returned.
+    .map((day) => (typeof day['theme'] === 'string' ? day : { ...day, theme: null }))
+    .sort((a, b) => a.day - b.day);
+  if (newDays.length === 0) {
+    return undefined;
+  }
+
+  const currentDay = record.days[current.dayIndex];
+  const keptActivities: unknown[] = currentDay.activities.slice(0, current.dayCheckpointIndex + 1);
+  const replacementForCurrentDay = newDays.find((day) => day.day === current.dayNumber);
+  let appended = (replacementForCurrentDay?.activities ?? []).map(toTripActivity);
+
+  // Options may restate the current checkpoint as their first stop: keep the
+  // tracked one (with the new time) rather than adding a duplicate.
+  const first = appended[0];
+  if (first && String(first['place']).trim().toLowerCase() === current.checkpointName.trim().toLowerCase()) {
+    keptActivities[keptActivities.length - 1] = {
+      ...currentDay.activities[current.dayCheckpointIndex],
+      time: first['time'],
+    };
+    appended = appended.slice(1);
+  }
+
+  const days = [
+    ...record.days.slice(0, current.dayIndex),
+    {
+      ...currentDay,
+      ...(replacementForCurrentDay ?? {}),
+      day: currentDay.day,
+      activities: [...keptActivities, ...appended],
+    },
+    ...newDays
+      .filter((day) => day.day > current.dayNumber)
+      .map((day) => ({ ...day, activities: (day.activities ?? []).map(toTripActivity) })),
+  ] as TripDay[];
+
+  const nextRecord: TripRecord = { ...record, days };
+  const nextCheckpoints = getTripCheckpoints(nextRecord);
+  const checkpointStates: CheckpointTracking[] = nextCheckpoints.map((checkpoint, index) => {
+    const existing = index <= currentIndex ? tracking.checkpointStates?.[index] : undefined;
+    return existing ?? {
+      dayNumber: checkpoint.dayNumber,
+      dayIndex: checkpoint.dayIndex,
+      dayCheckpointIndex: checkpoint.dayCheckpointIndex,
+      checkpointNumber: checkpoint.checkpointNumber,
+      overallCheckpointIndex: checkpoint.overallCheckpointIndex,
+      checkpointName: checkpoint.checkpointName,
+      ongoingDate: null,
+      delayHrs: 0,
+      status: 'not_visited',
+      onTime: null,
+      onTrack: null,
+    };
+  });
+
+  return {
+    ...nextRecord,
+    tracking: {
+      ...tracking,
+      checkpointStates,
+      driftHrs: 0,
+      unattributedDriftHrs: 0,
+      delayTriggered: false,
+    },
+    replan: {
+      optionId: application.optionId,
+      optionName: application.optionName,
+      absorbedDelayHrs: tracking.driftHrs,
+      appliedAt,
+    },
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class RealtimeDatabaseService {
   /**
@@ -450,6 +588,32 @@ export class RealtimeDatabaseService {
         trip: trip ?? snapshot.val() as TripRecord,
         refreshRequired: true,
       };
+    } finally {
+      unsubscribe();
+    }
+  }
+
+  /**
+   * Re-itinerary flow: rewrites the remaining itinerary of the existing trip
+   * `userTrips/{tripId}` in place (same trip ID) with the chosen option.
+   */
+  async applyReplan(tripId: string, application: ReplanApplication): Promise<ReplanApplyResult> {
+    const normalizedId = this.normalizeTripId(tripId);
+    // Realtime Database rejects `undefined`, so strip it by round-tripping through JSON.
+    const cleanApplication = JSON.parse(JSON.stringify(application)) as ReplanApplication;
+    const appliedAt = serverTimestamp();
+    const tripRef = ref(this.getDatabase(), `userTrips/${normalizedId}`);
+    if (!(await this.readOnce(tripRef)).exists()) {
+      return { kind: 'not-found' };
+    }
+    const { unsubscribe } = await this.listenForTrip(tripRef);
+
+    try {
+      const result = await runTransaction(tripRef, (currentValue) =>
+        applyReplanToTrip(currentValue as TripRecord | null, cleanApplication, appliedAt),
+      { applyLocally: false });
+      const trip = result.snapshot.val() as TripRecord | null;
+      return result.committed && trip ? { kind: 'applied', trip } : { kind: 'stale' };
     } finally {
       unsubscribe();
     }

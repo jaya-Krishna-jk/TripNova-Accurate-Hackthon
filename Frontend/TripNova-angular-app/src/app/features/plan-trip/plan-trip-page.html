@@ -1,247 +1,454 @@
 <div class="mx-auto flex w-full max-w-7xl flex-col space-y-12">
-  <!-- Read-only owner-verified live trip -->
-  <section
-    aria-labelledby="traveler-trip-heading"
-    aria-live="polite"
-    class="rounded-2xl bg-surface-container-lowest p-5 shadow-sm sm:p-7"
-    data-testid="traveler-trip-section"
-  >
-    <h2 id="traveler-trip-heading" tabindex="-1" class="font-headline text-title-lg text-primary">Your trip</h2>
-    @let tripState = travelerTripState();
+  @let tripState = travelerTripState();
 
-    @switch (tripState.kind) {
-      @case ('loading') {
-        <p class="mt-4 text-body-md text-on-surface-variant" role="status" aria-busy="true">
-          Checking for your live trip…
-        </p>
-      }
-      @case ('empty') {
-        <div class="mt-4 rounded-xl bg-surface-container-low p-4">
-          <p class="text-title-sm text-on-surface">No eligible trip is available.</p>
-          <p class="mt-1 text-body-md text-on-surface-variant">
-            Use the trip planner below to plan your next journey.
-          </p>
-        </div>
-      }
-      @case ('unavailable') {
-        <div class="mt-4 rounded-xl bg-surface-container-low p-4" role="status">
-          <p class="text-title-sm text-on-surface">Trip unavailable</p>
-          <p class="mt-1 text-body-md text-on-surface-variant">{{ tripState.message }}</p>
-        </div>
-      }
-      @case ('error') {
-        <div class="mt-4 flex flex-col items-start gap-3 rounded-xl bg-error-container p-4 text-on-error-container sm:flex-row sm:items-center sm:justify-between" role="alert">
-          <div>
-            <p class="text-title-sm">Live trip updates are unavailable</p>
-            <p class="mt-1 text-body-md">We couldn't read your trip right now. Try again when your connection is available.</p>
-          </div>
-          <button
-            type="button"
-            class="rounded-lg bg-surface-container-lowest px-4 py-2 text-label-md font-semibold text-on-surface shadow-sm hover:bg-surface-container"
-            (click)="retryTripListener()"
-          >
-            Try again
-          </button>
-        </div>
-      }
-      @case ('live') {
-        <div class="mt-5 space-y-5" data-testid="traveler-trip-card">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-title-md font-semibold text-on-surface">{{ tripState.trip.statusLabel }}</p>
-            <span class="w-fit rounded-full bg-primary-container/30 px-3 py-1 text-label-sm font-semibold text-primary">
-              Trip TN-3UP9HH
-            </span>
+  <!-- Read-only owner-verified live trip (layout follows the Stitch "LIve Dashboard" design) -->
+  @if (tripState.kind !== 'empty') {
+    <section
+      aria-labelledby="traveler-trip-heading"
+      aria-live="polite"
+      class="space-y-6"
+      data-testid="traveler-trip-section"
+    >
+      @if (tripState.kind === 'live') {
+        @let trip = tripState.trip;
+        <div class="space-y-6" data-testid="traveler-trip-card">
+          <!-- Live status header -->
+          <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-surface-container-lowest p-5 shadow-sm sm:p-6">
+            <div
+              class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gradient-to-br from-amber-100/50 via-blue-50/30 to-transparent blur-2xl"
+              aria-hidden="true"
+            ></div>
+
+            <div class="relative border-b border-slate-100 pb-5">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <span
+                  class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-label-sm uppercase"
+                  [class]="trip.isPreview
+                    ? 'border-amber-200 bg-amber-50 text-amber-800'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'"
+                >
+                  <span
+                    class="h-2 w-2 rounded-full"
+                    [class]="trip.isPreview ? 'bg-amber-500' : 'bg-emerald-500'"
+                    aria-hidden="true"
+                  ></span>
+                  {{ trip.statusLabel }}
+                </span>
+                <span class="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 font-mono text-body-sm font-semibold tracking-wide text-slate-700">
+                  Trip TN-3UP9HH
+                </span>
+                <span class="text-body-sm font-medium text-slate-500">
+                  {{ trip.days.length }} {{ trip.days.length === 1 ? 'day' : 'days' }} · {{ trip.totalActivities }}
+                  {{ trip.totalActivities === 1 ? 'activity' : 'activities' }}
+                </span>
+              </div>
+              <h2
+                id="traveler-trip-heading"
+                tabindex="-1"
+                class="mt-2 font-headline text-headline-md text-primary focus:outline-none sm:text-headline-lg"
+              >
+                Your live trip
+              </h2>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="relative mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <div class="mb-1 flex items-center justify-between gap-2 text-body-sm font-medium text-slate-500">
+                  <span>Journey timeline</span>
+                  @if (!trip.isPreview) {
+                    <span class="font-bold text-amber-600">{{ trip.dayPercent }}%</span>
+                  }
+                </div>
+                <p class="text-title-md text-slate-900">{{ trip.dayPositionLabel }}</p>
+                <p class="mt-1 flex items-center gap-1 text-body-sm text-slate-500">
+                  <span class="material-symbols-outlined text-[14px] text-amber-500" aria-hidden="true">wb_sunny</span>
+                  <span class="truncate">{{ trip.currentDayTheme ?? 'No day theme provided' }}</span>
+                </p>
+              </div>
+
+              <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <div class="mb-1 flex items-center justify-between gap-2 text-body-sm font-medium text-slate-500">
+                  <span>Today's milestone</span>
+                  @if (trip.isPreview) {
+                    <span class="font-bold text-secondary">Preview</span>
+                  } @else {
+                    <span class="font-bold text-blue-600">
+                      Step {{ trip.currentActivity.activityNumber }}/{{ trip.currentActivity.activityCount }}
+                    </span>
+                  }
+                </div>
+                <p class="text-title-md text-slate-900">{{ trip.activityPositionLabel }}</p>
+                <p class="mt-1 truncate text-body-sm text-slate-500">{{ trip.currentActivity.place }}</p>
+              </div>
+
+              <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <div class="mb-1 flex items-center justify-between gap-2 text-body-sm font-medium text-slate-500">
+                  <span>Trip completion</span>
+                  @if (trip.isPreview) {
+                    <span class="font-bold text-secondary">Preview</span>
+                  } @else {
+                    <span class="font-bold text-slate-700">{{ trip.overallPercent }}%</span>
+                  }
+                </div>
+                <p class="text-title-md text-slate-900">{{ trip.overallPositionLabel }}</p>
+                <p class="mt-1 flex items-center gap-1 text-body-sm font-medium text-emerald-600">
+                  <span class="material-symbols-outlined text-[14px]" aria-hidden="true">check_circle</span>
+                  {{ trip.isPreview ? 'Tracking has not started' : trip.completedCount + ' completed' }}
+                </p>
+              </div>
+
+              <div
+                class="min-w-0 rounded-xl border p-4"
+                [class]="trip.delayTone === 'triggered'
+                  ? 'border-amber-300 bg-amber-50'
+                  : 'border-slate-200 bg-slate-50/70'"
+                [attr.role]="trip.delayTone === 'triggered' ? 'status' : null"
+              >
+                <div
+                  class="mb-1 flex items-center justify-between gap-2 text-body-sm font-semibold"
+                  [class]="trip.delayTone === 'triggered' ? 'text-amber-800' : 'text-slate-500'"
+                >
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                      [class]="trip.delayTone === 'triggered'
+                        ? 'bg-amber-600'
+                        : trip.delayTone === 'not-triggered' ? 'bg-emerald-500' : 'bg-slate-400'"
+                      aria-hidden="true"
+                    ></span>
+                    Delay alert
+                  </span>
+                  <span
+                    class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
+                    [class]="trip.delayTone === 'triggered'
+                      ? 'bg-amber-200/70 text-amber-900'
+                      : trip.delayTone === 'not-triggered'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'"
+                  >
+                    @switch (trip.delayTone) {
+                      @case ('triggered') { Triggered }
+                      @case ('not-triggered') { Not triggered }
+                      @default { Not provided }
+                    }
+                  </span>
+                </div>
+                <p
+                  class="text-title-md"
+                  [class]="trip.delayTone === 'triggered' ? 'text-amber-900' : 'text-slate-900'"
+                >
+                  Drift: {{ trip.driftHoursLabel }}{{ trip.driftHoursLabel === 'Not provided' ? '' : ' hrs' }}
+                </p>
+                <p
+                  class="mt-1 text-body-sm"
+                  [class]="trip.delayTone === 'triggered' ? 'text-amber-700' : 'text-slate-500'"
+                >
+                  From the latest trip update
+                </p>
+              </div>
+            </div>
+
+            <!-- Itinerary progress rail (static; moves only when the trip position changes) -->
+            <section aria-label="Itinerary progress" class="relative mt-6 border-t border-slate-100 pt-5">
+              <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h3 class="flex items-center gap-2 text-body-sm font-bold text-slate-700">
+                  <span class="material-symbols-outlined text-[16px] text-amber-600" aria-hidden="true">route</span>
+                  Itinerary progress
+                </h3>
+                <p class="text-label-sm font-medium tracking-normal text-slate-500">
+                  {{ trip.isPreview ? 'Preview only — tracking has not started.' : 'Position from the latest trip update.' }}
+                </p>
+              </div>
+              <div
+                class="relative mx-2.5 h-3 rounded-full border border-slate-200 bg-slate-100"
+                [attr.role]="trip.isPreview ? 'img' : 'progressbar'"
+                [attr.aria-label]="trip.railAccessibleLabel"
+                [attr.aria-valuemin]="trip.isPreview ? null : 1"
+                [attr.aria-valuemax]="trip.isPreview ? null : trip.totalActivities"
+                [attr.aria-valuenow]="trip.isPreview ? null : trip.currentActivity.overallNumber"
+              >
+                @if (!trip.isPreview) {
+                  <div
+                    class="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-600 to-indigo-600"
+                    [style.width.%]="trip.railPositionPercent"
+                    aria-hidden="true"
+                  ></div>
+                }
+                <span
+                  class="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 bg-white shadow-md"
+                  [class]="trip.isPreview ? 'border-amber-500' : 'border-indigo-600'"
+                  [style.left.%]="trip.railPositionPercent"
+                  aria-hidden="true"
+                ></span>
+              </div>
+              <ul class="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-label-sm font-medium tracking-normal text-slate-500">
+                @for (day of trip.days; track day.ordinal) {
+                  <li
+                    [class]="day.status === 'completed'
+                      ? 'font-semibold text-emerald-700'
+                      : day.isSelected
+                        ? 'rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-bold text-indigo-900'
+                        : ''"
+                  >
+                    {{ day.heading }}{{ day.status === 'completed' ? ' ✓' : '' }}
+                  </li>
+                }
+              </ul>
+            </section>
           </div>
 
-          <div class="grid grid-cols-1 gap-2 rounded-xl bg-surface-container-low p-3 sm:grid-cols-3 sm:p-4">
-            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
-              {{ tripState.trip.dayPositionLabel }}
-            </p>
-            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
-              {{ tripState.trip.activityPositionLabel }}
-              @if (tripState.trip.isPreview) {
-                <span class="ml-1 text-label-sm font-bold text-secondary">Preview</span>
-              }
-            </p>
-            <p class="rounded-lg bg-surface-container-lowest px-3 py-2 text-body-md font-semibold text-on-surface">
-              {{ tripState.trip.overallPositionLabel }}
-              @if (tripState.trip.isPreview) {
-                <span class="ml-1 text-label-sm font-bold text-secondary">Preview</span>
-              }
-            </p>
-          </div>
-
-          <div class="grid gap-3 md:grid-cols-2">
-            <article class="min-w-0 rounded-xl bg-surface-container-low p-4">
-              <h3 class="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
-                {{ tripState.trip.isPreview ? 'First activity preview' : 'Current activity' }}
-              </h3>
-              <dl class="mt-3 space-y-2 break-words text-body-md">
-                <div>
-                  <dt class="inline font-semibold text-on-surface">Activity: </dt>
-                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.type }}</dd>
+          <!-- Current and next activity spotlight -->
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <article class="min-w-0 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-5 text-white shadow-lg">
+              <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                  <span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>
+                  {{ trip.isPreview ? 'First activity preview' : 'Current activity' }}
+                </span>
+                <span class="font-mono text-body-sm text-slate-400">{{ trip.currentActivity.time }}</span>
+              </div>
+              <h3 class="break-words font-headline text-headline-sm text-white">{{ trip.currentActivity.place }}</h3>
+              <p class="mt-0.5 flex items-center gap-1.5 text-body-sm font-medium text-amber-400">
+                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">{{ trip.currentActivity.icon }}</span>
+                <span>Activity: {{ trip.currentActivity.type }}</span>
+              </p>
+              <dl class="mt-3.5 space-y-2 break-words rounded-xl border border-white/10 bg-white/5 p-3 text-body-sm text-slate-300">
+                <div class="flex items-start gap-2">
+                  <span class="material-symbols-outlined mt-0.5 text-[14px] text-amber-400" aria-hidden="true">location_on</span>
+                  <div><dt class="inline font-bold">Location: </dt><dd class="inline">{{ trip.currentActivity.place }}</dd></div>
                 </div>
-                <div>
-                  <dt class="inline font-semibold text-on-surface">Location: </dt>
-                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.place }}</dd>
+                <div class="flex items-start gap-2">
+                  <span class="material-symbols-outlined mt-0.5 text-[14px] text-amber-400" aria-hidden="true">schedule</span>
+                  <div><dt class="inline font-bold">Time: </dt><dd class="inline">{{ trip.currentActivity.time }}</dd></div>
                 </div>
-                <div>
-                  <dt class="inline font-semibold text-on-surface">Time: </dt>
-                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.time }}</dd>
-                </div>
-                <div>
-                  <dt class="inline font-semibold text-on-surface">Details: </dt>
-                  <dd class="inline text-on-surface-variant">{{ tripState.trip.currentActivity.description }}</dd>
+                <div class="flex items-start gap-2">
+                  <span class="material-symbols-outlined mt-0.5 text-[14px] text-amber-400" aria-hidden="true">info</span>
+                  <div><dt class="inline font-bold">Details: </dt><dd class="inline">{{ trip.currentActivity.description }}</dd></div>
                 </div>
               </dl>
             </article>
 
-            <article class="min-w-0 rounded-xl bg-surface-container-low p-4">
-              <h3 class="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">Next activity</h3>
-              @if (tripState.trip.nextActivity; as nextActivity) {
-                <dl class="mt-3 space-y-2 break-words text-body-md">
-                  <div>
-                    <dt class="inline font-semibold text-on-surface">Activity: </dt>
-                    <dd class="inline text-on-surface-variant">{{ nextActivity.type }}</dd>
+            <article class="min-w-0 rounded-2xl border border-slate-200 bg-surface-container-lowest p-5 shadow-sm">
+              @if (trip.nextActivity; as nextActivity) {
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Next activity
+                  </span>
+                  <span class="font-mono text-body-sm text-slate-500">{{ nextActivity.time }}</span>
+                </div>
+                <h3 class="break-words font-headline text-headline-sm text-slate-900">{{ nextActivity.place }}</h3>
+                <p class="mt-0.5 flex items-center gap-1.5 text-body-sm font-medium text-emerald-700">
+                  <span class="material-symbols-outlined text-[14px]" aria-hidden="true">{{ nextActivity.icon }}</span>
+                  <span>Activity: {{ nextActivity.type }}</span>
+                </p>
+                <dl class="mt-3.5 space-y-2 break-words rounded-xl border border-slate-200 bg-slate-50 p-3 text-body-sm text-slate-600">
+                  <div class="flex items-start gap-2">
+                    <span class="material-symbols-outlined mt-0.5 text-[14px] text-slate-400" aria-hidden="true">location_on</span>
+                    <div><dt class="inline font-bold">Location: </dt><dd class="inline">{{ nextActivity.place }}</dd></div>
                   </div>
-                  <div>
-                    <dt class="inline font-semibold text-on-surface">Location: </dt>
-                    <dd class="inline text-on-surface-variant">{{ nextActivity.place }}</dd>
+                  <div class="flex items-start gap-2">
+                    <span class="material-symbols-outlined mt-0.5 text-[14px] text-slate-400" aria-hidden="true">schedule</span>
+                    <div><dt class="inline font-bold">Time: </dt><dd class="inline">{{ nextActivity.time }}</dd></div>
                   </div>
-                  <div>
-                    <dt class="inline font-semibold text-on-surface">Time: </dt>
-                    <dd class="inline text-on-surface-variant">{{ nextActivity.time }}</dd>
-                  </div>
-                  <div>
-                    <dt class="inline font-semibold text-on-surface">Details: </dt>
-                    <dd class="inline text-on-surface-variant">{{ nextActivity.description }}</dd>
+                  <div class="flex items-start gap-2">
+                    <span class="material-symbols-outlined mt-0.5 text-[14px] text-slate-400" aria-hidden="true">info</span>
+                    <div><dt class="inline font-bold">Details: </dt><dd class="inline">{{ nextActivity.description }}</dd></div>
                   </div>
                 </dl>
               } @else {
-                <p class="mt-3 text-body-md text-on-surface-variant">Not provided</p>
+                <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  Next activity
+                </span>
+                <p class="mt-4 text-body-md text-slate-500">
+                  {{ trip.isPreview ? 'Shown once the trip starts.' : 'Not provided — this is the last activity.' }}
+                </p>
               }
             </article>
           </div>
 
-          <div class="grid gap-3 rounded-xl border border-outline-variant/50 p-4 sm:grid-cols-2">
-            <p
-              class="text-body-md"
-              [class.text-error]="tripState.trip.delayTone === 'triggered'"
-              [class.text-on-surface]="tripState.trip.delayTone !== 'triggered'"
-              [attr.role]="tripState.trip.delayTone === 'triggered' ? 'status' : null"
-            >
-              <span class="font-semibold">Delay alert: </span>
-              @switch (tripState.trip.delayTone) {
-                @case ('triggered') { Triggered }
-                @case ('not-triggered') { Not triggered }
-                @default { Not provided }
-              }
-            </p>
-            <p class="text-body-md text-on-surface">
-              <span class="font-semibold">Drift: </span>
-              <span>{{ tripState.trip.driftHoursLabel }}{{ tripState.trip.driftHoursLabel === 'Not provided' ? '' : ' hrs' }}</span>
-            </p>
-          </div>
-
-          <section aria-label="Itinerary progress" class="rounded-xl bg-surface-container-low p-4 sm:p-5">
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h3 class="text-title-sm font-semibold text-on-surface">Itinerary progress</h3>
-              <p class="text-body-sm text-on-surface-variant">
-                {{ tripState.trip.isPreview ? 'Preview only — tracking has not started.' : 'Position from the latest trip update.' }}
-              </p>
-            </div>
-            <div
-              class="relative mx-2 mt-5 h-5"
-              [attr.role]="tripState.trip.isPreview ? 'img' : 'progressbar'"
-              [attr.aria-label]="tripState.trip.railAccessibleLabel"
-              [attr.aria-valuemin]="tripState.trip.isPreview ? null : 1"
-              [attr.aria-valuemax]="tripState.trip.isPreview ? null : tripState.trip.totalActivities"
-              [attr.aria-valuenow]="tripState.trip.isPreview ? null : tripState.trip.currentActivity.overallNumber"
-            >
-              <div class="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-outline-variant" aria-hidden="true"></div>
-              <span
-                class="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface-container-lowest bg-primary shadow-sm"
-                [class.bg-secondary]="tripState.trip.isPreview"
-                [style.left.%]="tripState.trip.railPositionPercent"
-                aria-hidden="true"
-              ></span>
-            </div>
-          </section>
-
-          <section aria-labelledby="itinerary-heading" class="space-y-3">
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 id="itinerary-heading" class="text-title-sm font-semibold text-on-surface">Your itinerary</h3>
-              @if (tripState.trip.isPreview) {
-                <span class="rounded-full bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
+          <!-- Day-by-day itinerary -->
+          <section
+            aria-labelledby="itinerary-heading"
+            class="space-y-5 rounded-2xl border border-slate-200 bg-surface-container-lowest p-5 shadow-sm sm:p-6"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div>
+                <h3 id="itinerary-heading" class="font-headline text-headline-sm text-slate-900">Your full journey itinerary</h3>
+                <p class="mt-0.5 text-body-sm text-slate-500">
+                  Every activity across {{ trip.days.length === 1 ? 'your day' : 'all ' + trip.days.length + ' days' }}, in order.
+                </p>
+              </div>
+              @if (trip.isPreview) {
+                <span class="rounded-full bg-secondary-container px-2.5 py-1 text-label-sm text-on-secondary-container">
                   Day 1 / Activity 1 preview
                 </span>
               }
             </div>
-            <ol class="space-y-3">
-              @for (day of tripState.trip.days; track day.ordinal) {
-                <li
-                  class="min-w-0 rounded-xl border p-3 sm:p-4"
-                  [class.border-primary]="day.isSelected"
-                  [class.bg-primary-fixed]="day.isSelected"
-                  [class.border-outline-variant]="!day.isSelected"
-                  [class.bg-surface-container-lowest]="!day.isSelected"
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-2">
-                    <div class="min-w-0">
-                      <h4 class="text-title-sm font-semibold text-on-surface">{{ day.heading }}</h4>
-                      @if (day.theme) {
-                        <p class="mt-0.5 break-words text-body-sm text-on-surface-variant">{{ day.theme }}</p>
-                      }
-                    </div>
-                    @if (day.isSelected) {
-                      <span class="rounded-full bg-primary-container px-2.5 py-1 text-label-sm font-semibold text-on-primary">
-                        {{ tripState.trip.isPreview ? 'Preview day' : 'Current day' }}
-                      </span>
-                    }
-                  </div>
 
-                  @if (day.activities.length > 0) {
-                    <ol class="mt-3 space-y-2">
-                      @for (activity of day.activities; track activity.overallNumber) {
-                        <li
-                          class="min-w-0 rounded-lg border p-3"
-                          [class.border-primary]="activity.isSelected && !tripState.trip.isPreview"
-                          [class.border-secondary]="activity.isSelected && tripState.trip.isPreview"
-                          [class.bg-surface-container]="activity.isSelected"
-                          [class.border-outline-variant]="!activity.isSelected"
-                          [class.bg-surface-container-lowest]="!activity.isSelected"
-                          [attr.aria-current]="activity.isSelected && !tripState.trip.isPreview ? 'step' : null"
+            <ol class="space-y-4">
+              @for (day of trip.days; track day.ordinal) {
+                <li class="min-w-0">
+                  <details
+                    class="group overflow-hidden rounded-xl"
+                    [class]="day.isSelected
+                      ? 'border-2 border-indigo-200 bg-indigo-50/20 shadow-sm'
+                      : 'border border-slate-200 bg-slate-50/50'"
+                    [open]="day.isSelected"
+                  >
+                    <summary
+                      class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5 [&::-webkit-details-marker]:hidden"
+                      [class]="day.isSelected ? 'bg-indigo-50/60 hover:bg-indigo-50' : 'hover:bg-slate-100/70'"
+                    >
+                      <div class="flex min-w-0 items-center gap-3">
+                        <span
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-body-sm font-bold"
+                          [class]="day.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : day.isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'"
+                          aria-hidden="true"
                         >
-                          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                            <p class="text-body-md font-semibold text-on-surface">
-                              Activity {{ activity.activityNumber }} of {{ activity.activityCount }}
-                            </p>
-                            @if (activity.isSelected) {
-                              <span class="text-label-sm font-bold text-primary">
-                                {{ tripState.trip.isPreview ? 'Preview activity' : 'Current activity' }}
+                          @if (day.status === 'completed') {
+                            <span class="material-symbols-outlined text-[16px]">check</span>
+                          } @else {
+                            D{{ day.ordinal }}
+                          }
+                        </span>
+                        <div class="min-w-0">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <h4 class="text-body-md font-bold text-slate-900">{{ day.heading }}</h4>
+                            @if (day.isSelected) {
+                              <span class="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                {{ trip.isPreview ? 'Preview day' : 'Current day' }}
                               </span>
+                            } @else if (day.status === 'completed') {
+                              <span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">Completed</span>
+                            } @else {
+                              <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Upcoming</span>
                             }
                           </div>
-                          <dl class="mt-2 grid gap-x-4 gap-y-1 break-words text-body-sm sm:grid-cols-2">
-                            <div><dt class="inline font-semibold text-on-surface">Type: </dt><dd class="inline text-on-surface-variant">{{ activity.type }}</dd></div>
-                            <div><dt class="inline font-semibold text-on-surface">Place: </dt><dd class="inline text-on-surface-variant">{{ activity.place }}</dd></div>
-                            <div><dt class="inline font-semibold text-on-surface">Time: </dt><dd class="inline text-on-surface-variant">{{ activity.time }}</dd></div>
-                            <div class="sm:col-span-2"><dt class="inline font-semibold text-on-surface">Details: </dt><dd class="inline text-on-surface-variant">{{ activity.description }}</dd></div>
-                          </dl>
-                        </li>
+                          <p class="break-words text-body-sm text-slate-500">
+                            {{ day.activities.length }} scheduled {{ day.activities.length === 1 ? 'activity' : 'activities' }}
+                            @if (day.theme) {
+                              · {{ day.theme }}
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div class="flex shrink-0 items-center gap-3">
+                        @if (!trip.isPreview) {
+                          <span
+                            class="hidden rounded-full px-2.5 py-1 text-body-sm font-semibold sm:inline-block"
+                            [class]="day.status === 'completed'
+                              ? 'text-emerald-700'
+                              : day.isSelected
+                                ? 'border border-indigo-200 bg-white text-indigo-700'
+                                : 'bg-slate-100 text-slate-600'"
+                          >
+                            {{ day.doneCount }} of {{ day.activities.length }} done
+                          </span>
+                        }
+                        <span
+                          class="material-symbols-outlined text-[18px] text-slate-400 transition-transform duration-200 group-open:rotate-180"
+                          aria-hidden="true"
+                        >expand_more</span>
+                      </div>
+                    </summary>
+
+                    <div class="border-t border-slate-200/70 bg-white p-4 sm:p-5">
+                      @if (day.activities.length > 0) {
+                        <ol class="space-y-3">
+                          @for (activity of day.activities; track activity.overallNumber) {
+                            <li
+                              class="flex min-w-0 flex-col justify-between gap-3 rounded-xl md:flex-row md:items-center"
+                              [class]="activity.isSelected
+                                ? (trip.isPreview
+                                    ? 'border-2 border-amber-400 bg-amber-50/60 p-4'
+                                    : 'border-2 border-indigo-500 bg-indigo-50/70 p-4')
+                                : 'border border-slate-200 bg-white p-3.5'"
+                              [attr.aria-current]="activity.isSelected && !trip.isPreview ? 'step' : null"
+                            >
+                              <div class="min-w-0 space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                  <span
+                                    class="font-mono text-body-sm font-bold"
+                                    [class]="activity.isSelected ? 'text-indigo-900' : 'text-slate-500'"
+                                  >
+                                    Activity {{ activity.activityNumber }} of {{ activity.activityCount }}
+                                  </span>
+                                  @if (activity.isSelected) {
+                                    <span
+                                      class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white"
+                                      [class]="trip.isPreview ? 'bg-amber-600' : 'bg-indigo-600'"
+                                    >
+                                      {{ trip.isPreview ? 'Preview activity' : 'Current activity' }}
+                                    </span>
+                                  } @else if (activity.status === 'done') {
+                                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">Done ✓</span>
+                                  } @else {
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">Upcoming</span>
+                                  }
+                                  <span class="text-body-sm font-semibold text-slate-700">Type: {{ activity.type }}</span>
+                                </div>
+                                <p class="break-words text-body-sm text-slate-600">
+                                  <strong>Details:</strong> {{ activity.description }}
+                                </p>
+                                <p class="flex items-center gap-1 break-words text-body-sm text-slate-500">
+                                  <span class="material-symbols-outlined text-[13px]" aria-hidden="true">{{ activity.icon }}</span>
+                                  Place: {{ activity.place }}
+                                </p>
+                              </div>
+                              <p class="shrink-0 font-mono text-body-sm font-bold text-slate-700 md:text-right">
+                                Time: {{ activity.time }}
+                              </p>
+                            </li>
+                          }
+                        </ol>
+                      } @else {
+                        <p class="text-body-sm text-slate-500">No activities provided.</p>
                       }
-                    </ol>
-                  } @else {
-                    <p class="mt-3 text-body-sm text-on-surface-variant">No activities provided.</p>
-                  }
+                    </div>
+                  </details>
                 </li>
               }
             </ol>
           </section>
         </div>
+      } @else {
+        <div class="rounded-2xl border border-slate-200 bg-surface-container-lowest p-5 shadow-sm sm:p-7">
+          <h2 id="traveler-trip-heading" tabindex="-1" class="font-headline text-title-lg text-primary">Your trip</h2>
+          @switch (tripState.kind) {
+            @case ('loading') {
+              <p class="mt-4 text-body-md text-on-surface-variant" role="status" aria-busy="true">
+                Checking for your live trip…
+              </p>
+            }
+            @case ('unavailable') {
+              <div class="mt-4 rounded-xl bg-surface-container-low p-4" role="status">
+                <p class="text-title-sm text-on-surface">Trip unavailable</p>
+                <p class="mt-1 text-body-md text-on-surface-variant">{{ tripState.message }}</p>
+              </div>
+            }
+            @case ('error') {
+              <div class="mt-4 flex flex-col items-start gap-3 rounded-xl bg-error-container p-4 text-on-error-container sm:flex-row sm:items-center sm:justify-between" role="alert">
+                <div>
+                  <p class="text-title-sm">Live trip updates are unavailable</p>
+                  <p class="mt-1 text-body-md">We couldn't read your trip right now. Try again when your connection is available.</p>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-lg bg-surface-container-lowest px-4 py-2 text-label-md font-semibold text-on-surface shadow-sm hover:bg-surface-container"
+                  (click)="retryTripListener()"
+                >
+                  Try again
+                </button>
+              </div>
+            }
+          }
+        </div>
       }
-    }
-  </section>
+    </section>
+  }
 
   <dialog
     #delayDialog
@@ -268,147 +475,161 @@
       <p id="delay-dialog-message" class="break-words text-body-md leading-relaxed text-on-surface">
         {{ delayAlertMessage() }}
       </p>
+      @if (replanError()) {
+        <div role="alert" class="flex items-start gap-2.5 rounded-lg border border-error/30 bg-error-container p-3 text-body-sm text-on-error-container">
+          <span class="material-symbols-outlined text-[18px]" aria-hidden="true">error</span>
+          <span>{{ replanError() }}</span>
+        </div>
+      }
       <button
         type="button"
-        class="w-full rounded-xl bg-primary px-4 py-3 text-label-md font-semibold text-on-primary hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        (click)="dismissDelayDialog()"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-label-md font-semibold text-on-primary hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+        [disabled]="replanLoading()"
+        (click)="viewRecommendations()"
       >
-        View the recommendations
+        @if (replanLoading()) {
+          <span class="material-symbols-outlined animate-spin text-[18px]" aria-hidden="true">progress_activity</span>
+          <span>Preparing your recommendations…</span>
+        } @else {
+          <span>{{ replanError() ? 'Try again' : 'View the recommendations' }}</span>
+        }
       </button>
     </div>
   </dialog>
 
-  <!-- Hero & AI trip prompt -->
-  <section
-    class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
-  >
-    <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-secondary-container/15 blur-3xl" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute -left-20 bottom-0 h-80 w-80 rounded-full bg-primary-container/5 blur-2xl" aria-hidden="true"></div>
+  <!-- Hero & AI trip prompt: only when there is no trip to show -->
+  @if (tripState.kind === 'live') {
+    <section
+      class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
+    >
+      <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-secondary-container/15 blur-3xl" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute -left-20 bottom-0 h-80 w-80 rounded-full bg-primary-container/5 blur-2xl" aria-hidden="true"></div>
 
-    <div class="relative z-10 mx-auto flex max-w-5xl flex-col items-center space-y-6 text-center">
-      <span class="rounded-full bg-surface-container px-3.5 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">
-        AI-Powered Intelligent Travel Concierge
-      </span>
+      <div class="relative z-10 mx-auto flex max-w-5xl flex-col items-center space-y-6 text-center">
+        <span class="rounded-full bg-surface-container px-3.5 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">
+          AI-Powered Intelligent Travel Concierge
+        </span>
 
-      <div class="max-w-3xl space-y-3">
-        <h1 class="font-headline text-headline-lg tracking-tight text-primary md:text-headline-xl">
-          Where would you like to go next?
-        </h1>
-        <p class="mx-auto max-w-2xl text-body-lg text-on-surface-variant">
-          Tell us about your dream trip. Our private AI concierge synthesizes live flight matrices, luxury mountain
-          stays, and hyper-local culinary dossiers.
-        </p>
-      </div>
-
-      <!-- Prompt box -->
-      <form
-        id="prompt-hero-box"
-        class="w-full space-y-4 rounded-2xl bg-surface-container-lowest p-4 text-left shadow-md transition-all duration-300 lg:p-6"
-        (ngSubmit)="generateTrip()"
-        novalidate
-      >
-        <label for="main-ai-prompt" class="sr-only">Describe your trip</label>
-        <textarea
-          id="main-ai-prompt"
-          name="prompt"
-          rows="3"
-          [(ngModel)]="prompt"
-          [disabled]="isLoading()"
-          placeholder="Plan a 5-day family trip from Hyderabad to Ooty for 4 people with vegetarian dining and mountain view stays..."
-          class="w-full resize-none bg-transparent text-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none disabled:opacity-60"
-        ></textarea>
-
-        <!-- Context anchors -->
-        <div class="flex flex-wrap items-center gap-2 pt-2">
-          <span class="text-label-sm uppercase tracking-wider text-on-surface-variant">Context Anchor:</span>
-          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">location_on</span>
-            {{ anchor().origin }}
-          </span>
-          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">group</span>
-            {{ anchor().group }}
-          </span>
-          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-            <span class="material-symbols-outlined text-[14px] text-secondary" aria-hidden="true">payments</span>
-            {{ anchor().budget }}
-          </span>
-          <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
-            <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">calendar_today</span>
-            {{ anchor().duration }}
-          </span>
+        <div class="max-w-3xl space-y-3">
+          <h1 class="font-headline text-headline-lg tracking-tight text-primary md:text-headline-xl">
+            Where would you like to go next?
+          </h1>
+          <p class="mx-auto max-w-2xl text-body-lg text-on-surface-variant">
+            Tell us about your dream trip. Our private AI concierge synthesizes live flight matrices, luxury mountain
+            stays, and hyper-local culinary dossiers.
+          </p>
         </div>
 
-        <!-- Action bar -->
-        <div
-          class="-mx-4 -mb-4 flex flex-col items-stretch justify-between gap-4 rounded-b-2xl bg-surface-container-low/50 px-4 py-3 pt-3 sm:flex-row sm:items-center lg:-mx-6 lg:-mb-6 lg:px-6"
+        <!-- Prompt box -->
+        <form
+          id="prompt-hero-box"
+          class="w-full space-y-4 rounded-2xl bg-surface-container-lowest p-4 text-left shadow-md transition-all duration-300 lg:p-6"
+          (ngSubmit)="generateTrip()"
+          novalidate
         >
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
-            >
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">attach_file</span>
-              <span class="hidden text-label-sm md:inline">Attach Vouchers</span>
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
-            >
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mic</span>
-              <span class="hidden text-label-sm md:inline">Voice Input</span>
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              class="hidden cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm sm:flex"
-            >
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>
-              <span class="text-label-sm">Filters: Veg Only</span>
-              <span class="material-symbols-outlined text-[16px]" aria-hidden="true">expand_more</span>
-            </button>
+          <label for="main-ai-prompt" class="sr-only">Describe your trip</label>
+          <textarea
+            id="main-ai-prompt"
+            name="prompt"
+            rows="3"
+            [(ngModel)]="prompt"
+            [disabled]="isLoading()"
+            placeholder="Plan a 5-day family trip from Hyderabad to Ooty for 4 people with vegetarian dining and mountain view stays..."
+            class="w-full resize-none bg-transparent text-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none disabled:opacity-60"
+          ></textarea>
+
+          <!-- Context anchors -->
+          <div class="flex flex-wrap items-center gap-2 pt-2">
+            <span class="text-label-sm uppercase tracking-wider text-on-surface-variant">Context Anchor:</span>
+            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">location_on</span>
+              {{ anchor().origin }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">group</span>
+              {{ anchor().group }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+              <span class="material-symbols-outlined text-[14px] text-secondary" aria-hidden="true">payments</span>
+              {{ anchor().budget }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded bg-surface-container px-2.5 py-1 text-label-sm text-on-surface">
+              <span class="material-symbols-outlined text-[14px] text-on-surface-variant" aria-hidden="true">calendar_today</span>
+              {{ anchor().duration }}
+            </span>
           </div>
 
-          <button
-            type="submit"
-            data-testid="generate-trip"
-            [disabled]="!canSubmit()"
-            [attr.aria-busy]="isLoading()"
-            class="flex items-center justify-center gap-2.5 rounded-lg bg-secondary-container px-6 py-3 text-label-md font-bold tracking-tight text-on-secondary-container shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+          <!-- Action bar -->
+          <div
+            class="-mx-4 -mb-4 flex flex-col items-stretch justify-between gap-4 rounded-b-2xl bg-surface-container-low/50 px-4 py-3 pt-3 sm:flex-row sm:items-center lg:-mx-6 lg:-mb-6 lg:px-6"
           >
-            @if (isLoading()) {
-              <span class="material-symbols-outlined animate-spin text-[20px]" aria-hidden="true">progress_activity</span>
-              <span>Generating your trip…</span>
-            } @else {
-              <span class="material-symbols-outlined text-[20px]" aria-hidden="true">auto_awesome</span>
-              <span>Generate My Trip</span>
-            }
-          </button>
-        </div>
-      </form>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                disabled
+                title="Coming soon"
+                class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
+              >
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">attach_file</span>
+                <span class="hidden text-label-sm md:inline">Attach Vouchers</span>
+              </button>
+              <button
+                type="button"
+                disabled
+                title="Coming soon"
+                class="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm"
+              >
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mic</span>
+                <span class="hidden text-label-sm md:inline">Voice Input</span>
+              </button>
+              <button
+                type="button"
+                disabled
+                title="Coming soon"
+                class="hidden cursor-not-allowed items-center gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2 text-on-surface-variant/70 shadow-sm sm:flex"
+              >
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">tune</span>
+                <span class="text-label-sm">Filters: Veg Only</span>
+                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">expand_more</span>
+              </button>
+            </div>
 
-      <!-- Quick prompts -->
-      <div class="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-        <span class="mr-1 text-label-sm font-medium text-on-surface-variant">Quick Prompts:</span>
-        @for (quick of quickPrompts; track quick.label) {
-          <button
-            type="button"
-            (click)="applyQuickPrompt(quick)"
-            [disabled]="isLoading()"
-            class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-surface-container-lowest px-3.5 py-1.5 text-label-sm text-on-surface shadow-sm transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span class="material-symbols-outlined text-[16px] text-secondary" aria-hidden="true">{{ quick.icon }}</span>
-            <span>{{ quick.label }}</span>
-          </button>
-        }
+            <button
+              type="submit"
+              data-testid="generate-trip"
+              [disabled]="!canSubmit()"
+              [attr.aria-busy]="isLoading()"
+              class="flex items-center justify-center gap-2.5 rounded-lg bg-secondary-container px-6 py-3 text-label-md font-bold tracking-tight text-on-secondary-container shadow-sm transition-all hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+            >
+              @if (isLoading()) {
+                <span class="material-symbols-outlined animate-spin text-[20px]" aria-hidden="true">progress_activity</span>
+                <span>Generating your trip…</span>
+              } @else {
+                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">auto_awesome</span>
+                <span>Generate My Trip</span>
+              }
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick prompts -->
+        <div class="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+          <span class="mr-1 text-label-sm font-medium text-on-surface-variant">Quick Prompts:</span>
+          @for (quick of quickPrompts; track quick.label) {
+            <button
+              type="button"
+              (click)="applyQuickPrompt(quick)"
+              [disabled]="isLoading()"
+              class="inline-flex cursor-pointer items-center gap-2 rounded-full bg-surface-container-lowest px-3.5 py-1.5 text-label-sm text-on-surface shadow-sm transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span class="material-symbols-outlined text-[16px] text-secondary" aria-hidden="true">{{ quick.icon }}</span>
+              <span>{{ quick.label }}</span>
+            </button>
+          }
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  }
 
   <!-- Request status -->
   <section aria-live="polite">

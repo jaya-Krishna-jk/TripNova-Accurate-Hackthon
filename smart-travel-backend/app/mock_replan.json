@@ -1,0 +1,315 @@
+{
+  "tripId": "111",
+  "userId": "jk",
+  "delay": {
+    "totalDelayHrs": 9,
+    "thresholdHrs": 5,
+    "delayTriggered": true,
+    "lastTrackingUpdate": "14 Nov 2026, 05:17 PM IST"
+  },
+  "currentCheckpoint": {
+    "name": "Sri Venkateswara Temple",
+    "dayNumber": 2,
+    "originallyPlannedTime": "06:00 AM",
+    "estimatedActualTime": "03:00 PM"
+  },
+  "alternatives": [
+    {
+      "optionId": "1",
+      "optionName": "Compressed Plan",
+      "strategy": "Keep as many original places as possible, tighten timings and cut idle time, aim to keep original return journey time.",
+      "description": "Starting from the current location at Sri Venkateswara Temple at 03:00 PM, the plan compresses the remaining Day 2 visits into an evening schedule and preserves the original Day 3 return timeline.",
+      "impact": {
+        "keptPlaces": [
+          "Akasa Ganga",
+          "Budget Hotel",
+          "Local Market",
+          "Local Eatery",
+          "Silathoranam",
+          "Thirupathi Bus Station",
+          "Enroute",
+          "Hyderabad Bus Station"
+        ],
+        "skippedPlaces": [
+          "Temple Canteen",
+          "Sri Padmavathi Ammavari Temple",
+          "Local Eatery (Lunch)"
+        ],
+        "returnTimeChange": "No change – arrival in Hyderabad remains at 07:30 PM on Day 3.",
+        "tradeOffs": "Faster pace on Day 2 with minimal rest; some meals and the Padmavathi temple visit are omitted."
+      },
+      "days": [
+        {
+          "day": 2,
+          "theme": "Spiritual Exploration – Compressed",
+          "daySummary": "Quick visit to Akasa Ganga, then evening market and dinner before resting for the return journey.",
+          "activities": [
+            {
+              "time": "03:15 PM",
+              "place": "Akasa Ganga",
+              "description": "Drive to Akasa Ganga (30 min), spend 45 mins at the sacred waterfall."
+            },
+            {
+              "time": "04:45 PM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel, freshen up and relax."
+            },
+            {
+              "time": "05:30 PM",
+              "place": "Local Market",
+              "description": "Explore local market for souvenirs and snacks."
+            },
+            {
+              "time": "07:15 PM",
+              "place": "Local Eatery",
+              "description": "Dinner at a budget-friendly restaurant serving local delicacies."
+            },
+            {
+              "time": "08:45 PM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel for the night."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "theme": "Return Journey",
+          "daySummary": "Check out, breakfast, visit Silathoranam, then board the bus back to Hyderabad.",
+          "activities": [
+            {
+              "time": "07:00 AM",
+              "place": "Budget Hotel",
+              "description": "Wake up, pack bags, and check out from the hotel."
+            },
+            {
+              "time": "08:00 AM",
+              "place": "Local Eatery",
+              "description": "Breakfast at a nearby local eatery."
+            },
+            {
+              "time": "09:00 AM",
+              "place": "Silathoranam",
+              "description": "Visit Silathoranam, a natural rock formation near the temple."
+            },
+            {
+              "time": "11:00 AM",
+              "place": "Thirupathi Bus Station",
+              "description": "Board the return bus to Hyderabad."
+            },
+            {
+              "time": "11:30 AM",
+              "place": "Enroute",
+              "description": "Stop for lunch at a budget-friendly eatery during the journey."
+            },
+            {
+              "time": "07:30 PM",
+              "place": "Hyderabad Bus Station",
+              "description": "Arrive back in Hyderabad, marking the end of the trip."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "optionId": "2",
+      "optionName": "Highlights Only",
+      "strategy": "Keep only must-see places, drop lower priority ones, relaxed pace with buffer, aim to keep original return journey time.",
+      "description": "Focus on the key spiritual highlight (Akasa Ganga) and the essential return leg (Silathoranam and bus), with a relaxed evening and morning.",
+      "impact": {
+        "keptPlaces": [
+          "Akasa Ganga",
+          "Budget Hotel",
+          "Local Eatery",
+          "Silathoranam",
+          "Thirupathi Bus Station",
+          "Enroute",
+          "Hyderabad Bus Station"
+        ],
+        "skippedPlaces": [
+          "Temple Canteen",
+          "Sri Padmavathi Ammavari Temple",
+          "Local Market",
+          "Local Eatery (Breakfast)"
+        ],
+        "returnTimeChange": "No change – arrival in Hyderabad remains at 07:30 PM on Day 3.",
+        "tradeOffs": "Misses the Padmavathi temple, market experience, and a full breakfast; more leisure time but fewer cultural stops."
+      },
+      "days": [
+        {
+          "day": 2,
+          "theme": "Spiritual Highlights",
+          "daySummary": "Visit Akasa Ganga, then unwind with a light dinner and early rest.",
+          "activities": [
+            {
+              "time": "03:15 PM",
+              "place": "Akasa Ganga",
+              "description": "Visit Akasa Ganga waterfall (45 min)."
+            },
+            {
+              "time": "04:30 PM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel, rest and refresh."
+            },
+            {
+              "time": "06:30 PM",
+              "place": "Local Eatery",
+              "description": "Light dinner at a local eatery."
+            },
+            {
+              "time": "07:30 PM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel for the night."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "theme": "Return Journey – Highlights",
+          "daySummary": "Check out, visit Silathoranam, then travel back to Hyderabad.",
+          "activities": [
+            {
+              "time": "07:00 AM",
+              "place": "Budget Hotel",
+              "description": "Check out from the hotel."
+            },
+            {
+              "time": "08:00 AM",
+              "place": "Silathoranam",
+              "description": "Visit Silathoranam, a natural rock formation (30 min)."
+            },
+            {
+              "time": "09:30 AM",
+              "place": "Thirupathi Bus Station",
+              "description": "Board the bus to Hyderabad."
+            },
+            {
+              "time": "10:00 AM",
+              "place": "Enroute",
+              "description": "Lunch stop during the journey."
+            },
+            {
+              "time": "07:30 PM",
+              "place": "Hyderabad Bus Station",
+              "description": "Arrive in Hyderabad, trip concludes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "optionId": "3",
+      "optionName": "Shifted Schedule",
+      "strategy": "Keep the plan largely as designed but shift everything by the 9-hour delay; return journey time changes and rebooking of return transport may be needed.",
+      "description": "All remaining activities are pushed forward by 9 hours. Day 2 extends late into the night and early morning; Day 3 starts in the late afternoon and the bus arrives in Hyderabad early the next morning.",
+      "impact": {
+        "keptPlaces": [
+          "Sri Venkateswara Temple",
+          "Temple Canteen",
+          "Sri Padmavathi Ammavari Temple",
+          "Local Eatery",
+          "Akasa Ganga",
+          "Budget Hotel",
+          "Local Market",
+          "Silathoranam",
+          "Thirupathi Bus Station",
+          "Enroute",
+          "Hyderabad Bus Station"
+        ],
+        "skippedPlaces": [],
+        "returnTimeChange": "Return journey arrives at Hyderabad at 04:30 AM on Day 4 (approx. 9 hours later than the original 07:30 PM). Rebooking of return transport is required.",
+        "tradeOffs": "Full original itinerary preserved but with very late nights and an overnight bus arrival; significant disruption to sleep and next-day plans."
+      },
+      "days": [
+        {
+          "day": 2,
+          "theme": "Spiritual Exploration – Shifted",
+          "daySummary": "All Day 2 activities delayed by 9 hours, running from afternoon through early morning.",
+          "activities": [
+            {
+              "time": "03:00 PM",
+              "place": "Sri Venkateswara Temple",
+              "description": "Current location, darshan in progress."
+            },
+            {
+              "time": "07:00 PM",
+              "place": "Temple Canteen",
+              "description": "Late breakfast at the temple canteen."
+            },
+            {
+              "time": "08:00 PM",
+              "place": "Sri Padmavathi Ammavari Temple",
+              "description": "Visit Goddess Padmavathi temple."
+            },
+            {
+              "time": "10:00 PM",
+              "place": "Local Eatery",
+              "description": "Late lunch at a local eatery."
+            },
+            {
+              "time": "11:30 PM",
+              "place": "Akasa Ganga",
+              "description": "Visit Akasa Ganga waterfall (night visit)."
+            },
+            {
+              "time": "01:30 AM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel for rest."
+            },
+            {
+              "time": "04:00 AM",
+              "place": "Local Market",
+              "description": "Early morning market visit."
+            },
+            {
+              "time": "05:30 AM",
+              "place": "Local Eatery",
+              "description": "Early morning dinner."
+            },
+            {
+              "time": "07:00 AM",
+              "place": "Budget Hotel",
+              "description": "Return to hotel for sleep."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "theme": "Return Journey – Shifted",
+          "daySummary": "Day 3 activities start in the late afternoon; bus departs evening and arrives next morning.",
+          "activities": [
+            {
+              "time": "04:00 PM",
+              "place": "Budget Hotel",
+              "description": "Check out (delayed)."
+            },
+            {
+              "time": "05:00 PM",
+              "place": "Local Eatery",
+              "description": "Breakfast."
+            },
+            {
+              "time": "06:00 PM",
+              "place": "Silathoranam",
+              "description": "Visit Silathoranam."
+            },
+            {
+              "time": "08:00 PM",
+              "place": "Thirupathi Bus Station",
+              "description": "Board return bus to Hyderabad."
+            },
+            {
+              "time": "08:30 PM",
+              "place": "Enroute",
+              "description": "Dinner stop during the journey."
+            },
+            {
+              "time": "04:30 AM",
+              "place": "Hyderabad Bus Station",
+              "description": "Arrive in Hyderabad (next day), trip ends."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
