@@ -19,6 +19,7 @@ export class BookingDialog {
   readonly plan = input<TravelPlan | null>(null);
   readonly tripDetails = input<TripDetails | null>(null);
   readonly closed = output<void>();
+  readonly completed = output<void>();
 
   protected readonly status = signal<DialogStatus>('idle');
   protected readonly errorMessage = signal('');
@@ -65,6 +66,7 @@ export class BookingDialog {
       });
       this.tripId.set(tripId);
       this.status.set('saved');
+      this.completed.emit();
     } catch (error) {
       this.errorMessage.set(
         error instanceof Error && error.message

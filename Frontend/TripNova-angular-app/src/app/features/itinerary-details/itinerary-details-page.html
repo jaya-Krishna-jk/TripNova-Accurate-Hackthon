@@ -519,6 +519,12 @@
 </div>
 
 @if (bookingOpen()) {
-  <app-booking-dialog [details]="d" [plan]="plan" [tripDetails]="tripDetails" (closed)="bookingOpen.set(false)" />
+  <app-booking-dialog
+    [details]="d"
+    [plan]="plan"
+    [tripDetails]="tripDetails"
+    (closed)="bookingOpen.set(false)"
+    (completed)="completeBooking()"
+  />
 }
 }

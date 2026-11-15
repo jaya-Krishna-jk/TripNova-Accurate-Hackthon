@@ -100,6 +100,10 @@ export class ItineraryDetailsPage implements OnInit {
     this.selectedDay.set(day);
   }
 
+  protected completeBooking(): void {
+    this.router.navigate(['/']);
+  }
+
   /** Formats an AI-supplied amount: numbers as INR, strings as-is, empty when unknown. */
   protected money(value: LooseValue | undefined): string {
     if (value === null || value === undefined || value === '') return '';
