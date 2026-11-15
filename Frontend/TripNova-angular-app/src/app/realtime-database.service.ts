@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { DataSnapshot, get, getDatabase, onValue, ref, runTransaction, serverTimestamp, set } from 'firebase/database';
+import { DataSnapshot, equalTo, get, getDatabase, onValue, orderByChild, query, ref, runTransaction, serverTimestamp, set } from 'firebase/database';
 import { firebaseConfig } from './firebase.config';
+import { UserSessionService } from './user-session.service';
 
 export interface DemoUser {
+  userId: string;
   name: string;
   username: string;
 }
@@ -490,11 +492,13 @@ export function applyReplanToTrip(
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeDatabaseService {
+  constructor(private readonly userSession?: UserSessionService) {}
+
   /**
-   * Observe the one approved traveler-home record. This listener is read-only;
-   * ownership is verified by the page before any trip fields are rendered.
+   * Observe only trips whose stored owner matches the signed-in user.
    */
   subscribeToTravelerHomeTrip(
+    userId: string,
     onSnapshot: (snapshot: DataSnapshot) => void,
     onError: (error: Error) => void,
   ): () => void {
@@ -508,8 +512,13 @@ export class RealtimeDatabaseService {
       stopListening();
     };
 
+    const userTripsQuery = query(
+      ref(this.getDatabase(), 'userTrips'),
+      orderByChild('userId'),
+      equalTo(userId),
+    );
     stopListening = onValue(
-      ref(this.getDatabase(), 'userTrips/TN-3UP9HH'),
+      userTripsQuery,
       (snapshot) => {
         if (active) {
           onSnapshot(snapshot);
@@ -624,12 +633,18 @@ export class RealtimeDatabaseService {
    * The record keeps the `days` itinerary so the trip can later be loaded for tracking.
    */
   async createTrip(record: Record<string, unknown>): Promise<string> {
+    const user = this.userSession?.currentUser();
+    if (!user) {
+      throw new Error('Sign in before saving a trip.');
+    }
+
     const tripId = this.createTripId();
     // Realtime Database rejects `undefined`, so strip it by round-tripping through JSON.
     const payload = JSON.parse(JSON.stringify(record)) as Record<string, unknown>;
     await set(ref(this.getDatabase(), `userTrips/${tripId}`), {
       ...payload,
       tripId,
+      userId: user.userId,
       createdAt: serverTimestamp(),
     });
     return tripId;
@@ -643,7 +658,12 @@ export class RealtimeDatabaseService {
       throw new Error('That username is already registered.');
     }
 
-    const user = { name: name.trim(), username: username.trim() };
+    const normalizedUsername = username.trim();
+    const user: DemoUser = {
+      userId: this.getUserKey(normalizedUsername),
+      name: name.trim(),
+      username: normalizedUsername,
+    };
     await set(userRef, {
       ...user,
       passwordHash: await this.hashPassword(password),
@@ -658,8 +678,12 @@ export class RealtimeDatabaseService {
       throw new Error('Username or password is incorrect.');
     }
 
-    const user = snapshot.val() as DemoUser;
-    return { name: user.name, username: user.username };
+    const user = snapshot.val() as Partial<DemoUser>;
+    return {
+      userId: user.userId ?? this.getUserKey(username),
+      name: user.name ?? '',
+      username: user.username ?? username.trim(),
+    };
   }
 
   private getDatabase() {

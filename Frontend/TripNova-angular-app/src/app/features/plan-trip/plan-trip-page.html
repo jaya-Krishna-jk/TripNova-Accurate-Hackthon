@@ -1,7 +1,7 @@
 <div class="mx-auto flex w-full max-w-7xl flex-col space-y-12">
   @let tripState = travelerTripState();
 
-  <!-- Read-only owner-verified live trip (layout follows the Stitch "LIve Dashboard" design) -->
+  <!-- Read-only current-user trip (layout follows the Stitch "Live Dashboard" design) -->
   @if (tripState.kind !== 'empty') {
     <section
       aria-labelledby="traveler-trip-heading"
@@ -35,7 +35,7 @@
                   {{ trip.statusLabel }}
                 </span>
                 <span class="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 font-mono text-body-sm font-semibold tracking-wide text-slate-700">
-                  Trip TN-3UP9HH
+                  Trip {{ trip.tripId }}
                 </span>
                 <span class="text-body-sm font-medium text-slate-500">
                   {{ trip.days.length }} {{ trip.days.length === 1 ? 'day' : 'days' }} · {{ trip.totalActivities }}
@@ -497,8 +497,8 @@
     </div>
   </dialog>
 
-  <!-- Hero & AI trip prompt: only when there is no trip to show -->
-  @if (tripState.kind === 'live') {
+  <!-- Keep trip planning available whenever this user has no active trip. -->
+  @if (tripState.kind !== 'live') {
     <section
       class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-surface-container-low via-surface-container-lowest to-surface-container-low p-6 shadow-sm sm:p-8 lg:p-12"
     >

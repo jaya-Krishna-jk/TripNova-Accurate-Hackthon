@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
 import { RealtimeDatabaseService } from '../../realtime-database.service';
+import { UserSessionService } from '../../user-session.service';
 import { PlanTripPage } from './plan-trip-page';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -53,7 +54,13 @@ describe('PlanTripPage', () => {
     },
   });
 
-  const emit = (value: unknown) => receiveSnapshot({ exists: () => true, val: () => value });
+  const emit = (value: unknown) => receiveSnapshot({
+    exists: () => true,
+    val: () => value && typeof value === 'object' && 'tripId' in value
+      ? { [String(value.tripId)]: value }
+      : value,
+  });
+  const emitTrips = (value: unknown) => receiveSnapshot({ exists: () => true, val: () => value });
   const emitMissing = () => receiveSnapshot({ exists: () => false, val: () => null });
 
   const createPage = async (): Promise<ComponentFixture<PlanTripPage>> => {
@@ -70,7 +77,7 @@ describe('PlanTripPage', () => {
   beforeEach(async () => {
     unsubscribe = vi.fn();
     navigate = vi.fn().mockResolvedValue(true);
-    subscribe = vi.fn((next: SnapshotCallback, error: ErrorCallback) => {
+    subscribe = vi.fn((_userId: string, next: SnapshotCallback, error: ErrorCallback) => {
       receiveSnapshot = next;
       receiveError = error;
       return unsubscribe;
@@ -84,6 +91,10 @@ describe('PlanTripPage', () => {
         {
           provide: RealtimeDatabaseService,
           useValue: { subscribeToTravelerHomeTrip: subscribe },
+        },
+        {
+          provide: UserSessionService,
+          useValue: { currentUser: () => ({ userId: 'jk', username: 'jk', name: 'Jamie' }) },
         },
       ],
     }).compileComponents();
@@ -101,6 +112,7 @@ describe('PlanTripPage', () => {
     const fixture = await createPage();
 
     expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(subscribe).toHaveBeenCalledWith('jk', expect.any(Function), expect.any(Function));
     emit(record);
     fixture.detectChanges();
 
@@ -154,17 +166,14 @@ describe('PlanTripPage', () => {
 
     emitMissing();
     fixture.detectChanges();
-    expect(pageText(fixture)).toContain('No eligible trip is available.');
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="traveler-trip-card"]')).toBeNull();
 
     emit({ ...bookedTrip(), userId: 'someone-else', days: [{ day: 1, activities: [activity('PRIVATE LOCATION', 'Private', 'now')] }] });
     fixture.detectChanges();
-    expect(pageText(fixture)).not.toContain('PRIVATE LOCATION');
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="traveler-trip-card"]')).toBeNull();
 
     emit(inProgressTrip({ status: 'completed' }));
     fixture.detectChanges();
-    expect(pageText(fixture)).toContain('No eligible trip is available.');
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="traveler-trip-card"]')).toBeNull();
 
     for (const invalid of [
@@ -181,6 +190,33 @@ describe('PlanTripPage', () => {
       expect(pageText(fixture)).toContain('Trip unavailable');
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="traveler-trip-card"]')).toBeNull();
     }
+  });
+
+  it('selects the most recent non-completed trip for the current user only', async () => {
+    const fixture = await createPage();
+    emitTrips({
+      'TN-OLD': { ...bookedTrip(), tripId: 'TN-OLD', createdAt: 10 },
+      'TN-NEW': { ...bookedTrip(), tripId: 'TN-NEW', createdAt: 20 },
+      'TN-OTHER': {
+        ...bookedTrip(),
+        tripId: 'TN-OTHER',
+        userId: 'someone-else',
+        createdAt: 30,
+        days: [{ day: 1, activities: [activity('PRIVATE LOCATION', 'Private', 'now')] }],
+      },
+      'TN-DONE': {
+        ...bookedTrip(),
+        tripId: 'TN-DONE',
+        createdAt: 40,
+        tracking: { status: 'completed', currentCheckpointIndex: 0 },
+      },
+    });
+    fixture.detectChanges();
+
+    expect(pageText(fixture)).toContain('Trip TN-NEW');
+    expect(pageText(fixture)).not.toContain('TN-OLD');
+    expect(pageText(fixture)).not.toContain('PRIVATE LOCATION');
+    expect(pageText(fixture)).not.toContain('TN-DONE');
   });
 
   it('displays delay and drift independently and gates journey motion on explicit on-time status', async () => {

@@ -73,8 +73,8 @@
             <span class="material-symbols-outlined text-[20px]">person</span>
           </span>
           <div class="flex flex-col">
-            <span class="text-title-sm font-semibold leading-snug text-on-surface">Guest Traveller</span>
-            <a routerLink="/login" class="text-label-sm font-medium text-secondary hover:underline">Sign in</a>
+            <span class="text-title-sm font-semibold leading-snug text-on-surface">{{ userSession.currentUser()?.name }}</span>
+            <button type="button" (click)="logout()" class="text-left text-label-sm font-medium text-secondary hover:underline">Log Out</button>
           </div>
         </div>
         <span class="material-symbols-outlined p-1 text-[20px] text-on-surface-variant" aria-hidden="true">more_vert</span>
@@ -112,13 +112,13 @@
           <span class="text-label-md font-semibold text-on-surface">INR (₹)</span>
           <span class="material-symbols-outlined text-[16px] text-on-surface-variant" aria-hidden="true">expand_more</span>
         </div>
-        <a
-          routerLink="/login"
+        <span
           class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-fixed text-primary"
-          aria-label="Account"
+          [attr.aria-label]="userSession.currentUser()?.name ?? 'Account'"
         >
           <span class="material-symbols-outlined text-[18px]" aria-hidden="true">person</span>
-        </a>
+        </span>
+        <span class="hidden text-body-sm font-medium text-on-surface sm:inline">{{ userSession.currentUser()?.name }}</span>
       </div>
     </header>
 

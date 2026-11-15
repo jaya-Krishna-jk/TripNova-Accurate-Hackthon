@@ -5,6 +5,12 @@ const firebaseMocks = vi.hoisted(() => ({
   get: vi.fn(),
   onValue: vi.fn(),
   ref: vi.fn((_database: unknown, path: string) => path),
+  query: vi.fn((reference: unknown, ...constraints: unknown[]) => ({ reference, constraints })),
+  orderByChild: vi.fn((field: string) => `orderByChild:${field}`),
+  equalTo: vi.fn((value: string) => `equalTo:${value}`),
+  query: vi.fn((reference: unknown, ...constraints: unknown[]) => ({ reference, constraints })),
+  orderByChild: vi.fn((field: string) => `orderByChild:${field}`),
+  equalTo: vi.fn((value: string) => `equalTo:${value}`),
   runTransaction: vi.fn(),
   serverTimestamp: vi.fn(() => ({ '.sv': 'timestamp' })),
   set: vi.fn(),
@@ -227,7 +233,7 @@ describe('RealtimeDatabaseService traveler-home live subscription', () => {
     vi.clearAllMocks();
   });
 
-  it('subscribes only to the exact approved child and forwards snapshots unchanged', () => {
+  it('queries only trips matching the requested user and forwards snapshots unchanged', () => {
     const firstSnapshot: { exists: () => boolean; val: () => unknown } = {
       exists: () => true, val: () => ({ userId: 'jk', revision: 1 }),
     };
@@ -246,13 +252,19 @@ describe('RealtimeDatabaseService traveler-home live subscription', () => {
     const service = new RealtimeDatabaseService();
     const onSnapshot = vi.fn();
 
-    const stop = service.subscribeToTravelerHomeTrip(onSnapshot, vi.fn());
+    const stop = service.subscribeToTravelerHomeTrip('jk', onSnapshot, vi.fn());
 
-    expect(firebaseMocks.ref).toHaveBeenCalledTimes(1);
-    expect(firebaseMocks.ref).toHaveBeenCalledWith({}, 'userTrips/TN-3UP9HH');
+    expect(firebaseMocks.ref).toHaveBeenCalledExactlyOnceWith({}, 'userTrips');
+    expect(firebaseMocks.orderByChild).toHaveBeenCalledExactlyOnceWith('userId');
+    expect(firebaseMocks.equalTo).toHaveBeenCalledExactlyOnceWith('jk');
+    expect(firebaseMocks.query).toHaveBeenCalledExactlyOnceWith(
+      'userTrips',
+      'orderByChild:userId',
+      'equalTo:jk',
+    );
     expect(firebaseMocks.onValue).toHaveBeenCalledTimes(1);
     expect(firebaseMocks.onValue).toHaveBeenCalledWith(
-      'userTrips/TN-3UP9HH',
+      { reference: 'userTrips', constraints: ['orderByChild:userId', 'equalTo:jk'] },
       expect.any(Function),
       expect.any(Function),
     );
@@ -265,7 +277,7 @@ describe('RealtimeDatabaseService traveler-home live subscription', () => {
     expect(onSnapshot.mock.calls[1][0]).toBe(updateSnapshot);
     expect(onSnapshot.mock.calls[2][0]).toBe(missingSnapshot);
 
-    // This feature must observe the exact child only, never fetch, query, or write.
+    // The listener must use a userId equality query and remain read-only.
     expect(firebaseMocks.getDatabase).toHaveBeenCalledTimes(1);
     expect(firebaseMocks.get).not.toHaveBeenCalled();
     expect(firebaseMocks.runTransaction).not.toHaveBeenCalled();
@@ -292,7 +304,7 @@ describe('RealtimeDatabaseService traveler-home live subscription', () => {
     const onSnapshot = vi.fn();
     const onError = vi.fn();
 
-    const stop = service.subscribeToTravelerHomeTrip(onSnapshot, onError);
+    const stop = service.subscribeToTravelerHomeTrip('jk', onSnapshot, onError);
     const failure = new Error('permission denied');
     receiveError!(failure);
 

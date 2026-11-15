@@ -21,11 +21,7 @@
 			<h2>{{ isSignUp() ? 'Create your account' : 'Welcome back' }}</h2>
 			<p class="form-intro">{{ isSignUp() ? 'Set up your TripNova profile.' : 'Sign in to continue to TripNova.' }}</p>
 
-			@if (currentUser(); as user) {
-				<p class="form-message form-message--success">Signed in as {{ user.name }} ({{ user.username }}).</p>
-				<button type="button" class="submit-button" (click)="logout()">Sign out</button>
-			} @else {
-				<form (ngSubmit)="submit()">
+			<form (ngSubmit)="submit()">
 					@if (isSignUp()) {
 						<label for="name">Name</label>
 						<input id="name" name="name" type="text" autocomplete="name" [(ngModel)]="name" required />
@@ -48,16 +44,15 @@
 						<span>{{ isLoading() ? 'Please wait...' : isSignUp() ? 'Create account' : 'Sign in' }}</span>
 						<span aria-hidden="true">&#8594;</span>
 					</button>
-				</form>
+			</form>
 
-				<p class="switch-mode">
-					{{ isSignUp() ? 'Already have an account?' : 'New to TripNova?' }}
-					<button type="button" class="text-button text-button--strong" (click)="toggleMode()">
-						{{ isSignUp() ? 'Sign in' : 'Create account' }}
-					</button>
-				</p>
-				<p class="legal-copy">By continuing, you agree to use TripNova responsibly while planning your travels.</p>
-			}
+			<p class="switch-mode">
+				{{ isSignUp() ? 'Already have an account?' : 'New to TripNova?' }}
+				<button type="button" class="text-button text-button--strong" (click)="toggleMode()">
+					{{ isSignUp() ? 'Sign in' : 'Create account' }}
+				</button>
+			</p>
+			<p class="legal-copy">By continuing, you agree to use TripNova responsibly while planning your travels.</p>
 		</div>
 	</section>
 </main>

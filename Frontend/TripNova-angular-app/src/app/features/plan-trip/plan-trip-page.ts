@@ -18,6 +18,7 @@ import { TravelApiService } from '../../core/services/travel-api.service';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
 import { RealtimeDatabaseService } from '../../realtime-database.service';
+import { UserSessionService } from '../../user-session.service';
 
 interface ContextAnchor {
   origin: string;
@@ -59,6 +60,7 @@ interface TripDayView {
 }
 
 interface TravelerTripView {
+  tripId: string;
   statusLabel: string;
   isPreview: boolean;
   dayPositionLabel: string;
@@ -87,8 +89,6 @@ type TravelerTripState =
   | { kind: 'live'; trip: TravelerTripView };
 
 const NOT_PROVIDED = 'Not provided';
-const TRIP_ID = 'TN-3UP9HH';
-const OWNER_ID = 'jk';
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -104,6 +104,7 @@ export class PlanTripPage implements OnInit, OnDestroy {
   private readonly tripState = inject(TripStateService);
   private readonly router = inject(Router);
   private readonly database = inject(RealtimeDatabaseService);
+  private readonly userSession = inject(UserSessionService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly replan = inject(ReplanService);
   private replanSubscription: Subscription | undefined;
@@ -177,15 +178,24 @@ export class PlanTripPage implements OnInit, OnDestroy {
     if (this.destroyed) {
       return;
     }
+    const userId = this.userSession.currentUser()?.userId;
+    if (!userId) {
+      this.travelerTripState.set({ kind: 'empty' });
+      return;
+    }
     this.resetDelayAlert();
     this.stopTripListener?.();
     this.travelerTripState.set({ kind: 'loading' });
     this.stopTripListener = this.database.subscribeToTravelerHomeTrip(
+      userId,
       (snapshot) => {
         if (this.destroyed) {
           return;
         }
-        const projectedTrip = this.projectTravelerTrip(snapshot.exists() ? snapshot.val() : null);
+        const selectedTrip = this.selectActiveTrip(snapshot.exists() ? snapshot.val() : null, userId);
+        const projectedTrip = selectedTrip
+          ? this.projectTravelerTrip(selectedTrip.value, userId, selectedTrip.tripId)
+          : { kind: 'empty' as const };
         this.travelerTripState.set(projectedTrip);
         this.processDelayTransition(projectedTrip);
       },
@@ -268,7 +278,12 @@ export class PlanTripPage implements OnInit, OnDestroy {
     }
     this.replanLoading.set(true);
     this.replanError.set('');
-    this.replanSubscription = this.replan.requestOptions(TRIP_ID).subscribe({
+    const state = this.travelerTripState();
+    if (state.kind !== 'live') {
+      this.replanLoading.set(false);
+      return;
+    }
+    this.replanSubscription = this.replan.requestOptions(state.trip.tripId).subscribe({
       next: (response) => {
         this.replanLoading.set(false);
         this.replan.response.set(response);
@@ -310,7 +325,34 @@ export class PlanTripPage implements OnInit, OnDestroy {
     }
   }
 
-  private projectTravelerTrip(value: unknown): TravelerTripState {
+  private selectActiveTrip(
+    value: unknown,
+    userId: string,
+  ): { tripId: string; value: unknown } | null {
+    if (!isObjectRecord(value)) {
+      return null;
+    }
+
+    const candidates = Object.entries(value)
+      .filter(([tripId, trip]) => {
+        if (!isObjectRecord(trip) || trip['userId'] !== userId) {
+          return false;
+        }
+        const tracking = trip['tracking'];
+        return !(isObjectRecord(tracking) && tracking['status'] === 'completed');
+      })
+      .map(([tripId, trip]) => ({
+        tripId,
+        value: trip,
+        createdAt: isObjectRecord(trip) && typeof trip['createdAt'] === 'number' ? trip['createdAt'] : 0,
+      }))
+      .sort((left, right) => right.createdAt - left.createdAt || right.tripId.localeCompare(left.tripId));
+
+    const candidate = candidates[0];
+    return candidate ? { tripId: candidate.tripId, value: candidate.value } : null;
+  }
+
+  private projectTravelerTrip(value: unknown, userId: string, tripId: string): TravelerTripState {
     if (value === null) {
       return { kind: 'empty' };
     }
@@ -319,10 +361,10 @@ export class PlanTripPage implements OnInit, OnDestroy {
     }
 
     // Check ownership before inspecting or projecting any other trip field.
-    if (value['userId'] !== OWNER_ID) {
+    if (value['userId'] !== userId) {
       return { kind: 'unavailable', message: 'No eligible trip is available.' };
     }
-    if (value['tripId'] !== undefined && value['tripId'] !== TRIP_ID) {
+    if (value['tripId'] !== undefined && value['tripId'] !== tripId) {
       return { kind: 'unavailable', message: 'Trip data is unavailable.' };
     }
 
@@ -486,6 +528,7 @@ export class PlanTripPage implements OnInit, OnDestroy {
     return {
       kind: 'live',
       trip: {
+        tripId,
         statusLabel: preview ? 'Planned / Not started' : 'In progress',
         isPreview: preview,
         dayPositionLabel,
