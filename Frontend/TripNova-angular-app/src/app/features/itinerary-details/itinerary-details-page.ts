@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TripStateService } from '../../core/services/trip-state.service';
 import { ItineraryDay, LooseValue } from '../../core/models/travel.models';
 import { BookingDialog } from './booking-dialog';
-import { downloadTextFile } from '../../core/utils/download-file';
+import { downloadPdfFile } from '../../core/utils/download-file';
 
 interface BudgetSegment {
   name: string;
@@ -136,7 +136,8 @@ export class ItineraryDetailsPage implements OnInit {
     }
 
     for (const day of this.days) {
-      lines.push(`DAY ${day.day}: ${day.theme}`);
+      const date = this.dayDate(day.day, false);
+      lines.push(`DAY ${day.day}${date ? ` · ${date}` : ''}: ${day.theme}`);
       if (day.daySummary) lines.push(day.daySummary);
       if (day.activities.length) {
         lines.push('Activities:');
@@ -166,9 +167,9 @@ export class ItineraryDetailsPage implements OnInit {
       lines.push('');
     }
 
-    downloadTextFile(
-      `${this.details.planName || 'tripnova-itinerary'}.txt`.replace(/[^\w.-]+/g, '-'),
-      lines.join('\n'),
+    downloadPdfFile(
+      `${this.details.planName || 'tripnova-itinerary'}.pdf`.replace(/[^\w.-]+/g, '-'),
+      lines,
     );
   }
 

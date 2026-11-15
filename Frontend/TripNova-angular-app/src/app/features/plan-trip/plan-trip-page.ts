@@ -19,7 +19,7 @@ import { TripStateService } from '../../core/services/trip-state.service';
 import { ChatResponse, TravelRequest } from '../../core/models/travel.models';
 import { RealtimeDatabaseService } from '../../realtime-database.service';
 import { UserSessionService } from '../../user-session.service';
-import { downloadTextFile } from '../../core/utils/download-file';
+import { downloadPdfFile } from '../../core/utils/download-file';
 
 interface QuickPrompt {
   label: string;
@@ -566,7 +566,7 @@ export class PlanTripPage implements OnInit, OnDestroy {
       lines.push('');
     }
 
-    downloadTextFile(`tripnova-${trip.tripId}-itinerary.txt`, lines.join('\n'));
+    downloadPdfFile(`tripnova-${trip.tripId}-itinerary.pdf`, lines);
   }
 
   private notProvidedUnlessString(value: unknown): string {
